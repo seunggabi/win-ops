@@ -26,6 +26,22 @@ win-ops is a comprehensive PowerShell-based system maintenance tool designed for
 
 ## Installation
 
+### Option 1: Automated Installation
+
+```powershell
+# Clone the repository
+git clone https://github.com/seunggabi/win-ops.git
+cd win-ops
+
+# Run installer (basic installation)
+.\install.ps1
+
+# Or install with PATH and scheduled task
+.\install.ps1 -AddToPath -InstallScheduledTask
+```
+
+### Option 2: Manual Installation
+
 ```powershell
 # Clone the repository
 git clone https://github.com/seunggabi/win-ops.git
@@ -34,8 +50,15 @@ cd win-ops
 # Import the module
 Import-Module .\win-ops.psd1
 
-# Or install as a scheduled task (requires admin)
-.\bin\win-ops.ps1 install
+# Run directly
+.\bin\win-ops.ps1 --help
+```
+
+### Option 3: Install as Scheduled Task
+
+```powershell
+# Install with automatic scheduling (requires admin)
+.\install.ps1 -InstallScheduledTask -ScheduleInterval Hourly
 ```
 
 ## Usage
@@ -99,9 +122,82 @@ win-ops/
 └── README.md               # This file
 ```
 
+## Modules
+
+Win-Ops includes the following cleanup modules:
+
+### Core Modules
+- **Config**: Configuration management and validation
+- **Logger**: Structured logging with rotation and ANSI colors
+- **Lock**: Process locking to prevent concurrent operations
+- **Safety**: Critical path protection and safety checks
+- **Disk**: Disk space analysis and monitoring
+- **Trash**: Safe deletion with rollback capability
+
+### Cleanup Modules
+- **CacheCleanup**: Windows and application caches
+- **TmpCleanup**: Temporary files and folders
+- **LogCleanup**: Application and system logs
+- **BrowserCleanup**: Browser caches (Chrome, Edge, Firefox, Brave, Opera)
+- **DevCleanup**: Development tool caches (npm, yarn, pip, NuGet, Maven, Gradle)
+- **DockerCleanup**: Docker images, containers, and volumes
+- **PackageManagerCleanup**: Package manager caches (Chocolatey, Scoop)
+
+### Process Management
+- **ZombieKiller**: Detect and terminate zombie processes
+- **OrphanKiller**: Clean up orphaned child processes
+- **OrphanAppCleanup**: Remove leftover data from uninstalled applications
+
+### Utility Modules
+- **Format**: Human-readable formatting utilities
+- **Parallel**: Parallel execution engine (PowerShell 7+)
+- **Notify**: Windows Toast notifications
+- **Snapshot**: System state capture and comparison
+- **Analyze**: Disk usage analysis and reporting
+
 ## Configuration
 
-Configuration files are located in the `config/` directory. Customize cleanup rules, safety settings, and exclusion patterns to match your environment.
+Configuration files are located in the `config/` directory:
+
+- **win-ops.json**: Main configuration file
+- **default.json**: Default settings (fallback)
+- **protected-processes.json**: Processes that should never be terminated
+
+### Example Configuration
+
+```json
+{
+  "general": {
+    "dryRun": false,
+    "verbose": false,
+    "useTrash": true,
+    "parallel": true,
+    "maxThreads": 4
+  },
+  "modules": [
+    {
+      "name": "CacheCleanup",
+      "enabled": true,
+      "settings": {
+        "location": "All",
+        "ageInDays": 7,
+        "useTrash": true
+      }
+    }
+  ],
+  "safety": {
+    "protectedPaths": [
+      "%SystemRoot%",
+      "%ProgramFiles%",
+      "%USERPROFILE%\\Documents"
+    ],
+    "confirmDeletion": true,
+    "maxBatchSize": 1000
+  }
+}
+```
+
+Customize cleanup rules, safety settings, and exclusion patterns to match your environment.
 
 ## Development
 
@@ -122,15 +218,40 @@ Invoke-Pester -CodeCoverage
 
 No build step required - win-ops is pure PowerShell.
 
-## Safety
+## Safety Features
 
-win-ops includes multiple safety features:
+Win-Ops is designed with safety as a top priority:
 
-- **Trash System**: All deletions are moved to trash first, allowing recovery
-- **File Locking**: Prevents concurrent operations on the same files
-- **Critical Path Protection**: System-critical directories are never touched
-- **Dry Run Mode**: Preview changes before execution
-- **Logging**: All operations are logged for audit purposes
+### Trash System
+- All deletions are moved to trash first (default retention: 72 hours)
+- Easy recovery with `win-ops restore` command
+- Automatic trash cleanup after retention period
+- Per-module trash organization
+
+### File Locking
+- Prevents concurrent operations on the same files
+- Mutex-based locking mechanism
+- Automatic lock cleanup on process exit
+
+### Critical Path Protection
+- System-critical directories are never touched
+- Protected paths defined in configuration
+- Protected file extensions (exe, dll, sys, etc.)
+- Protected processes list (System, lsass, csrss, etc.)
+
+### Process Safety
+- Never terminates critical Windows processes
+- Age-based filtering for process cleanup
+- CPU/memory threshold checks before termination
+- Dry-run mode for testing
+
+### Additional Safety Measures
+- **Dry Run Mode**: Preview all changes before execution
+- **Confirmation Prompts**: Optional confirmation for destructive operations
+- **Comprehensive Logging**: All operations logged with timestamps
+- **Snapshot Comparison**: Before/after system state comparison
+- **Batch Size Limits**: Maximum items per operation to prevent accidents
+- **Age Filters**: Only clean files/processes older than specified age
 
 ## License
 

@@ -349,6 +349,13 @@ function Remove-BrowserData {
                         $item.Length
                     }
 
+                    # Safety check: verify path is safe to delete
+                    if (-not (Test-WinOpsPathSafe -Path $item.FullName)) {
+                        Write-Verbose "Skipping protected path: $($item.FullName)"
+                        $failedCount++
+                        continue
+                    }
+
                     if ($PSCmdlet.ShouldProcess($item.FullName, "Remove $BrowserName $DataType")) {
                         if ($UseTrash) {
                             Move-WinOpsToTrash -Path $item.FullName -Module "BrowserCleanup.$BrowserName" -ErrorAction Stop | Out-Null
@@ -471,6 +478,12 @@ function Clear-WinOpsBrowserData {
 
         if ($isRunning) {
             if ($Force) {
+                # Safety check: verify process is not protected
+                if (Test-WinOpsProcessProtected -ProcessName $browserInfo.ProcessName) {
+                    Write-Warning "Cannot close protected process: $($browserInfo.Name)"
+                    continue
+                }
+
                 Write-Warning "Closing $($browserInfo.Name)..."
                 try {
                     Stop-Process -Name $browserInfo.ProcessName -Force -ErrorAction Stop

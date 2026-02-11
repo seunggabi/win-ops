@@ -481,6 +481,12 @@ function Clear-WinOpsOrphanedAppData {
     # Remove AppData folders
     if ($orphanedData.AppDataFolders.Count -gt 0) {
         foreach ($folder in $orphanedData.AppDataFolders) {
+            # Safety check: verify path is safe to delete
+            if (-not (Test-WinOpsPathSafe -Path $folder.Path)) {
+                Write-Verbose "Skipping protected path: $($folder.Path)"
+                continue
+            }
+
             if ($Force -or $PSCmdlet.ShouldProcess($folder.Path, "Remove orphaned AppData folder")) {
                 try {
                     if ($UseTrash) {
@@ -502,6 +508,12 @@ function Clear-WinOpsOrphanedAppData {
     # Remove orphaned shortcuts
     if ($orphanedData.OrphanedShortcuts.Count -gt 0) {
         foreach ($shortcut in $orphanedData.OrphanedShortcuts) {
+            # Safety check: verify path is safe to delete
+            if (-not (Test-WinOpsPathSafe -Path $shortcut.ShortcutPath)) {
+                Write-Verbose "Skipping protected path: $($shortcut.ShortcutPath)"
+                continue
+            }
+
             if ($Force -or $PSCmdlet.ShouldProcess($shortcut.ShortcutPath, "Remove orphaned shortcut")) {
                 try {
                     Remove-Item -Path $shortcut.ShortcutPath -Force -ErrorAction Stop
@@ -518,6 +530,12 @@ function Clear-WinOpsOrphanedAppData {
     # Remove Program Files folders
     if ($orphanedData.ProgramFilesFolders.Count -gt 0) {
         foreach ($folder in $orphanedData.ProgramFilesFolders) {
+            # Safety check: verify path is safe to delete
+            if (-not (Test-WinOpsPathSafe -Path $folder.Path)) {
+                Write-Verbose "Skipping protected path: $($folder.Path)"
+                continue
+            }
+
             if ($Force -or $PSCmdlet.ShouldProcess($folder.Path, "Remove orphaned Program Files folder")) {
                 try {
                     if ($UseTrash) {

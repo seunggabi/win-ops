@@ -309,6 +309,13 @@ function Remove-LogFiles {
                         continue
                     }
 
+                    # Safety check: verify path is safe to delete
+                    if (-not (Test-WinOpsPathSafe -Path $item.FullName)) {
+                        Write-Verbose "Skipping protected path: $($item.FullName)"
+                        $skippedCount++
+                        continue
+                    }
+
                     if ($PSCmdlet.ShouldProcess($item.FullName, "Remove log file")) {
                         if ($UseTrash) {
                             Move-WinOpsToTrash -Path $item.FullName -Module $LocationName -ErrorAction Stop | Out-Null

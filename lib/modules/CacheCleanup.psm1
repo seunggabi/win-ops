@@ -242,6 +242,12 @@ function Remove-CacheFiles {
                         $item.Length
                     }
 
+                    # Safety check: verify path is safe to delete
+                    if (-not (Test-WinOpsPathSafe -Path $item.FullName)) {
+                        Write-Verbose "Skipping protected path: $($item.FullName)"
+                        continue
+                    }
+
                     if ($PSCmdlet.ShouldProcess($item.FullName, "Remove cache item")) {
                         if ($UseTrash) {
                             Move-WinOpsToTrash -Path $item.FullName -Module $CacheName -ErrorAction Stop | Out-Null
@@ -507,6 +513,11 @@ function Optimize-WinOpsIconCache {
     Write-WinOpsLog -Level INFO -Message "Rebuilding icon cache"
 
     try {
+        # Safety check: verify Explorer is not protected (should pass for Explorer restart)
+        if (Test-WinOpsProcessProtected -ProcessName explorer) {
+            Write-Warning "Explorer is marked as protected, but icon cache rebuild requires restart"
+        }
+
         # Stop Explorer
         Write-Verbose "Stopping Explorer process..."
         Stop-Process -Name explorer -Force -ErrorAction Stop
@@ -548,9 +559,145 @@ function Optimize-WinOpsIconCache {
 
 #endregion
 
+function Invoke-WinOpsCacheCleanup {
+    <#
+    .SYNOPSIS
+        Main execution function for cache cleanup operations.
+
+    .DESCRIPTION
+        Convenience wrapper for Clear-WinOpsCache with commonly used parameters.
+        Cleans Windows and application caches based on age criteria.
+
+    .PARAMETER AgeInDays
+        Only remove cache files older than specified days (default: 7).
+
+    .PARAMETER UseTrash
+        Move files to trash instead of permanent deletion (allows 72-hour recovery).
+
+    .PARAMETER DryRun
+        Show what would be removed without actually removing files.
+
+    .PARAMETER Force
+        Bypass confirmation prompts.
+
+    .EXAMPLE
+        Invoke-WinOpsCacheCleanup
+        # Cleans all caches older than 7 days
+
+    .EXAMPLE
+        Invoke-WinOpsCacheCleanup -AgeInDays 30 -UseTrash
+        # Cleans caches older than 30 days with recovery option
+
+    .EXAMPLE
+        Invoke-WinOpsCacheCleanup -DryRun
+        # Preview what would be cleaned
+    #>
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter()]
+        [ValidateRange(0, 365)]
+        [int]$AgeInDays = 7,
+
+        [Parameter()]
+        [switch]$UseTrash,
+
+        [Parameter()]
+        [switch]$DryRun,
+
+        [Parameter()]
+        [switch]$Force
+    )
+
+    Write-WinOpsLog -Level INFO -Message "Starting cache cleanup operation (Age: $AgeInDays days)"
+
+    # Clean all cache types
+    $params = @{
+        CacheType = 'All'
+        AgeInDays = $AgeInDays
+        UseTrash = $UseTrash
+        DryRun = $DryRun
+        Force = $Force
+    }
+
+    if ($PSCmdlet.ShouldProcess) {
+        $params['Confirm'] = $false
+    }
+
+    $results = Clear-WinOpsCache @params
+
+    # Generate summary
+    $totalRemoved = ($results | Measure-Object -Property RemovedSize -Sum).Sum
+    $totalCount = ($results | Measure-Object -Property RemovedCount -Sum).Sum
+
+    $summary = [PSCustomObject]@{
+        TotalItemsRemoved = $totalCount
+        TotalSizeRemoved = $totalRemoved
+        TotalSizeRemovedMB = [math]::Round($totalRemoved / 1MB, 2)
+        TotalSizeRemovedGB = [math]::Round($totalRemoved / 1GB, 2)
+        CacheTypesProcessed = $results.Count
+        Details = $results
+        Timestamp = (Get-Date)
+    }
+
+    return $summary
+}
+
+function Get-WinOpsCacheTargets {
+    <#
+    .SYNOPSIS
+        Returns list of cache cleanup targets.
+
+    .DESCRIPTION
+        Provides detailed information about cache locations that will be targeted
+        for cleanup, including paths, descriptions, and current sizes.
+
+    .PARAMETER AgeInDays
+        Filter by files older than specified days (default: 7).
+
+    .EXAMPLE
+        Get-WinOpsCacheTargets
+        # Lists all cache targets with 7-day filter
+
+    .EXAMPLE
+        Get-WinOpsCacheTargets -AgeInDays 30 | Format-Table
+        # Shows cache targets with 30-day filter in table format
+    #>
+    [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
+    param(
+        [Parameter()]
+        [ValidateRange(0, 365)]
+        [int]$AgeInDays = 7
+    )
+
+    Write-Verbose "Retrieving cache cleanup targets (Age filter: $AgeInDays days)"
+
+    # Get cache info for all types
+    $cacheInfo = Get-WinOpsCacheInfo -CacheType All -AgeInDays $AgeInDays
+
+    # Enrich with target-specific information
+    $targets = foreach ($cache in $cacheInfo) {
+        [PSCustomObject]@{
+            Name = $cache.CacheType
+            Description = $cache.Description
+            Paths = $cache.Paths
+            CurrentSizeMB = $cache.TotalSizeMB
+            CurrentSizeGB = $cache.TotalSizeGB
+            SafetyLevel = $cache.SafetyLevel
+            AgeFilter = $AgeInDays
+            WillCleanup = ($cache.TotalSize -gt 0)
+        }
+    }
+
+    return $targets | Sort-Object CurrentSizeMB -Descending
+}
+
 # Export functions
 Export-ModuleMember -Function @(
     'Clear-WinOpsCache',
     'Get-WinOpsCacheInfo',
-    'Optimize-WinOpsIconCache'
+    'Optimize-WinOpsIconCache',
+    'Invoke-WinOpsCacheCleanup',
+    'Get-WinOpsCacheTargets'
 )

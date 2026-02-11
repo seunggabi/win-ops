@@ -93,6 +93,16 @@ $script:TempLocations = @{
         RequiresElevation = $true
     }
 
+    WindowsUpdateTemp = @{
+        Paths = @(
+            "$env:SystemRoot\SoftwareDistribution\Download"
+        )
+        Description = "Windows Update temporary downloads"
+        DefaultAgeInDays = 30
+        SafetyLevel = "Strict"
+        RequiresElevation = $true
+    }
+
     WindowsSetupLogs = @{
         Paths = @(
             "$env:SystemRoot\Panther\*",
@@ -305,6 +315,13 @@ function Remove-TempFiles {
                         $item.Length
                     }
 
+                    # Safety check: verify path is safe to delete
+                    if (-not (Test-WinOpsPathSafe -Path $item.FullName)) {
+                        Write-Verbose "Skipping protected path: $($item.FullName)"
+                        $skippedCount++
+                        continue
+                    }
+
                     if ($PSCmdlet.ShouldProcess($item.FullName, "Remove temporary file/folder")) {
                         if ($UseTrash) {
                             Move-WinOpsToTrash -Path $item.FullName -Module $LocationName -ErrorAction Stop | Out-Null
@@ -391,7 +408,7 @@ function Clear-WinOpsTempFiles {
         [Parameter(Mandatory)]
         [ValidateSet(
             'UserTemp', 'SystemTemp', 'RecentItems', 'WindowsErrorReporting',
-            'MemoryDumps', 'WindowsInstallerCache', 'WindowsSetupLogs',
+            'MemoryDumps', 'WindowsInstallerCache', 'WindowsUpdateTemp', 'WindowsSetupLogs',
             'DownloadedInstallFiles', 'TempInternetFiles', 'All'
         )]
         [string]$Location,
@@ -539,7 +556,7 @@ function Get-WinOpsTempFileInfo {
         [Parameter()]
         [ValidateSet(
             'UserTemp', 'SystemTemp', 'RecentItems', 'WindowsErrorReporting',
-            'MemoryDumps', 'WindowsInstallerCache', 'WindowsSetupLogs',
+            'MemoryDumps', 'WindowsInstallerCache', 'WindowsUpdateTemp', 'WindowsSetupLogs',
             'DownloadedInstallFiles', 'TempInternetFiles', 'All'
         )]
         [string]$Location = 'All',

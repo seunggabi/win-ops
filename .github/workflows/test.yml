@@ -1,0 +1,105 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        pwsh-version: ['7.4', 'latest']
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PowerShell ${{ matrix.pwsh-version }}
+        if: matrix.pwsh-version != 'latest'
+        uses: actions/setup-powershell@v1
+        with:
+          pwsh-version: ${{ matrix.pwsh-version }}
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Write-Host "Installing Pester 5.x..."
+          Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module Pester -MinimumVersion 5.0.0
+          $pester = Get-Module Pester
+          Write-Host "Installed Pester version: $($pester.Version)"
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          .\Run-Tests.ps1 -CI -Parallel
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-pwsh-${{ matrix.pwsh-version }}
+          path: tests/test-results.xml
+          retention-days: 7
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-pwsh-${{ matrix.pwsh-version }}
+          path: tests/coverage.xml
+          retention-days: 7
+
+      - name: Publish Test Results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        with:
+          files: tests/test-results.xml
+          check_name: Test Results (PowerShell ${{ matrix.pwsh-version }})
+
+      - name: Code Coverage Summary
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path tests/coverage.xml) {
+            Write-Host "Coverage report generated at tests/coverage.xml"
+            # Parse and display coverage percentage
+            [xml]$coverage = Get-Content tests/coverage.xml
+            if ($coverage.report) {
+              $linesCovered = [int]$coverage.report.counter | Where-Object { $_.type -eq 'LINE' } | Select-Object -ExpandProperty covered
+              $linesTotal = [int]$coverage.report.counter | Where-Object { $_.type -eq 'LINE' } | Select-Object -ExpandProperty missed
+              $linesTotal += $linesCovered
+              $percent = [math]::Round(($linesCovered / $linesTotal) * 100, 2)
+              Write-Host "Code Coverage: $percent% ($linesCovered / $linesTotal lines)"
+            }
+          }
+
+  lint:
+    name: PSScriptAnalyzer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -Force -SkipPublisherCheck -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings PSGallery
+          $results | Format-Table -AutoSize
+          if ($results.Count -gt 0) {
+            Write-Host "Found $($results.Count) PSScriptAnalyzer issues"
+            exit 1
+          }

@@ -469,6 +469,11 @@ function Optimize-WinOpsDockerWSL {
     }
 
     try {
+        # Safety check: verify path is safe to modify
+        if (-not (Test-WinOpsPathSafe -Path $dockerWSLPath)) {
+            throw "Docker WSL2 virtual disk path is in a protected location: $dockerWSLPath"
+        }
+
         # Shutdown Docker WSL2 distributions
         Write-Verbose "Shutting down Docker WSL2 distributions..."
         wsl --shutdown 2>&1 | Out-Null

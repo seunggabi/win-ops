@@ -1,0 +1,174 @@
+{
+  "$schema": "./schema.json",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-01",
+
+  "general": {
+    "dryRun": false,
+    "verbose": false,
+    "useTrash": true,
+    "parallel": true,
+    "maxThreads": 4,
+    "timeoutSeconds": 300
+  },
+
+  "paths": {
+    "trash": "%LOCALAPPDATA%\\win-ops\\trash",
+    "logs": "%LOCALAPPDATA%\\win-ops\\logs",
+    "config": "%LOCALAPPDATA%\\win-ops\\config"
+  },
+
+  "retention": {
+    "trashHours": 72,
+    "logDays": 14,
+    "snapshotDays": 30
+  },
+
+  "modules": [
+    {
+      "name": "CacheCleanup",
+      "enabled": true,
+      "settings": {
+        "location": "All",
+        "ageInDays": 7,
+        "useTrash": true
+      }
+    },
+    {
+      "name": "TmpCleanup",
+      "enabled": true,
+      "settings": {
+        "location": "All",
+        "ageInDays": 3,
+        "useTrash": true
+      }
+    },
+    {
+      "name": "LogCleanup",
+      "enabled": true,
+      "settings": {
+        "location": "All",
+        "ageInDays": 90,
+        "minSizeMB": 1,
+        "useTrash": true
+      }
+    },
+    {
+      "name": "BrowserCleanup",
+      "enabled": false,
+      "settings": {
+        "browser": "All",
+        "dataType": "Cache",
+        "useTrash": true
+      }
+    },
+    {
+      "name": "DevCleanup",
+      "enabled": false,
+      "settings": {
+        "targets": ["npm", "yarn", "pip"],
+        "useTrash": true
+      }
+    },
+    {
+      "name": "DockerCleanup",
+      "enabled": false,
+      "settings": {
+        "pruneImages": false,
+        "pruneContainers": true,
+        "pruneVolumes": false,
+        "pruneNetworks": true
+      }
+    },
+    {
+      "name": "PackageManagerCleanup",
+      "enabled": false,
+      "settings": {
+        "managers": ["chocolatey", "scoop"],
+        "useTrash": true
+      }
+    },
+    {
+      "name": "ZombieKiller",
+      "enabled": true,
+      "settings": {
+        "cpuThreshold": 0.5,
+        "memoryThresholdMB": 100,
+        "minAgeMinutes": 30,
+        "dryRun": true
+      }
+    },
+    {
+      "name": "OrphanKiller",
+      "enabled": false,
+      "settings": {
+        "minAgeMinutes": 60
+      }
+    },
+    {
+      "name": "OrphanAppCleanup",
+      "enabled": false,
+      "settings": {
+        "dataType": "All",
+        "minAgeInDays": 30,
+        "useTrash": true
+      }
+    }
+  ],
+
+  "safety": {
+    "protectedPaths": [
+      "%SystemRoot%",
+      "%ProgramFiles%",
+      "%ProgramFiles(x86)%",
+      "%USERPROFILE%\\Documents",
+      "%USERPROFILE%\\Desktop",
+      "%USERPROFILE%\\Pictures",
+      "%USERPROFILE%\\Music",
+      "%USERPROFILE%\\Videos"
+    ],
+    "protectedExtensions": [
+      ".exe",
+      ".dll",
+      ".sys",
+      ".ini",
+      ".cfg"
+    ],
+    "confirmDeletion": true,
+    "maxBatchSize": 1000
+  },
+
+  "notifications": {
+    "enabled": true,
+    "types": {
+      "success": true,
+      "warning": true,
+      "error": true
+    },
+    "minSpaceFreedMB": 100
+  },
+
+  "logging": {
+    "level": "INFO",
+    "maxLogSizeMB": 5,
+    "maxLogFiles": 7,
+    "colorOutput": true
+  },
+
+  "snapshot": {
+    "beforeCleanup": true,
+    "afterCleanup": true,
+    "exportPath": "%LOCALAPPDATA%\\win-ops\\snapshots",
+    "retention": {
+      "keepCount": 30,
+      "keepDays": 90
+    }
+  },
+
+  "schedule": {
+    "enabled": false,
+    "interval": "Hourly",
+    "startTime": "00:00",
+    "runOnBattery": false
+  }
+}

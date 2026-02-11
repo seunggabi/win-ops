@@ -2,17 +2,13 @@
 
 <#
 .SYNOPSIS
-    Development environment cleanup module.
+    Development tools cleanup module for package managers, IDEs, and build caches.
 
 .DESCRIPTION
-    Cleans development-related caches and build artifacts:
-    - Node.js (node_modules, npm cache, yarn cache)
-    - Python (__pycache__, pip cache)
-    - .NET (NuGet packages, obj/bin folders)
-    - Maven/Gradle caches
-    - Docker build cache
-    - Git repository cleanup
-    - IDE caches (VS Code, Visual Studio, IntelliJ)
+    Cleans development tool caches:
+    - Package managers: npm, yarn, pnpm, pip, NuGet, Maven, Gradle
+    - IDEs: VS Code, Visual Studio
+    - Optional: node_modules directories (can be very large)
 
 .NOTES
     Module: WinOps.Modules.DevCleanup
@@ -28,118 +24,97 @@ Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force
 Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force
 Import-Module (Join-Path $coreModulePath 'Trash.psm1') -Force
 
-#region Dev Tool Locations
+#region Cache Target Definitions
 
-$script:DevLocations = @{
-    NodeModules = @{
-        SearchPaths = @("C:\Users\*\Documents", "C:\Users\*\Projects", "C:\Projects", "D:\Projects")
-        Pattern = "node_modules"
-        Description = "Node.js dependencies (node_modules)"
-        MinAgeInDays = 30
-        SafetyLevel = "Normal"
+$script:DevCacheTargets = @{
+    npm = @{
+        Name = "npm Cache"
+        Path = "$env:APPDATA\npm-cache"
+        Description = "Node Package Manager cache"
+        Category = "PackageManager"
+        CanRegenerate = $true
+        CommandToRegenerate = "npm cache clean --force"
     }
 
-    NpmCache = @{
-        Paths = @(
-            "$env:APPDATA\npm-cache",
-            "$env:LOCALAPPDATA\npm-cache"
-        )
-        Description = "npm package cache"
-        MinAgeInDays = 60
-        SafetyLevel = "Normal"
+    yarn = @{
+        Name = "Yarn Cache"
+        Path = "$env:LOCALAPPDATA\Yarn\Cache"
+        Description = "Yarn package manager cache"
+        Category = "PackageManager"
+        CanRegenerate = $true
+        CommandToRegenerate = "yarn cache clean"
     }
 
-    YarnCache = @{
-        Paths = @(
-            "$env:LOCALAPPDATA\Yarn\Cache",
-            "$env:APPDATA\Yarn\Cache"
-        )
-        Description = "Yarn package cache"
-        MinAgeInDays = 60
-        SafetyLevel = "Normal"
+    pnpm = @{
+        Name = "pnpm Cache"
+        Path = "$env:LOCALAPPDATA\pnpm-cache"
+        Description = "pnpm package manager cache"
+        Category = "PackageManager"
+        CanRegenerate = $true
+        CommandToRegenerate = "pnpm store prune"
     }
 
-    PythonCache = @{
-        SearchPaths = @("C:\Users\*\Documents", "C:\Users\*\Projects", "C:\Projects", "D:\Projects")
-        Pattern = "__pycache__"
-        Description = "Python bytecode cache"
-        MinAgeInDays = 7
-        SafetyLevel = "Normal"
+    pip = @{
+        Name = "pip Cache"
+        Path = "$env:LOCALAPPDATA\pip\Cache"
+        Description = "Python pip package cache"
+        Category = "PackageManager"
+        CanRegenerate = $true
+        CommandToRegenerate = "pip cache purge"
     }
 
-    PipCache = @{
-        Paths = @(
-            "$env:LOCALAPPDATA\pip\Cache"
-        )
-        Description = "pip package cache"
-        MinAgeInDays = 60
-        SafetyLevel = "Normal"
+    nuget = @{
+        Name = "NuGet Cache"
+        Path = "$env:LOCALAPPDATA\NuGet\Cache"
+        Description = ".NET NuGet package cache"
+        Category = "PackageManager"
+        CanRegenerate = $true
+        CommandToRegenerate = "dotnet nuget locals all --clear"
     }
 
-    NuGetCache = @{
-        Paths = @(
-            "$env:USERPROFILE\.nuget\packages",
-            "$env:LOCALAPPDATA\NuGet\Cache"
-        )
-        Description = "NuGet package cache"
-        MinAgeInDays = 90
-        SafetyLevel = "Normal"
+    maven = @{
+        Name = "Maven Repository"
+        Path = "$env:USERPROFILE\.m2\repository"
+        Description = "Maven local repository cache"
+        Category = "PackageManager"
+        CanRegenerate = $true
+        CommandToRegenerate = "mvn dependency:purge-local-repository"
     }
 
-    DotNetBuildOutput = @{
-        SearchPaths = @("C:\Users\*\Documents", "C:\Users\*\Projects", "C:\Projects", "D:\Projects")
-        Pattern = @("bin", "obj")
-        Description = ".NET build output (bin/obj)"
-        MinAgeInDays = 30
-        SafetyLevel = "Normal"
-    }
-
-    MavenCache = @{
-        Paths = @(
-            "$env:USERPROFILE\.m2\repository"
-        )
-        Description = "Maven repository cache"
-        MinAgeInDays = 90
-        SafetyLevel = "Normal"
-    }
-
-    GradleCache = @{
-        Paths = @(
-            "$env:USERPROFILE\.gradle\caches"
-        )
+    gradle = @{
+        Name = "Gradle Cache"
+        Path = "$env:USERPROFILE\.gradle\caches"
         Description = "Gradle build cache"
-        MinAgeInDays = 90
-        SafetyLevel = "Normal"
+        Category = "PackageManager"
+        CanRegenerate = $true
+        CommandToRegenerate = "gradle cleanBuildCache"
     }
 
-    VSCodeCache = @{
+    vscode = @{
+        Name = "VS Code Cache"
         Paths = @(
             "$env:APPDATA\Code\Cache",
             "$env:APPDATA\Code\CachedData",
-            "$env:APPDATA\Code\CachedExtensions"
+            "$env:APPDATA\Code\CachedExtensions",
+            "$env:APPDATA\Code\CachedExtensionVSIXs"
         )
-        Description = "Visual Studio Code cache"
-        MinAgeInDays = 30
-        SafetyLevel = "Normal"
+        Description = "Visual Studio Code cache files"
+        Category = "IDE"
+        CanRegenerate = $true
+        CommandToRegenerate = "Restart VS Code (cache regenerates automatically)"
     }
 
-    VisualStudioCache = @{
+    visualstudio = @{
+        Name = "Visual Studio Cache"
         Paths = @(
             "$env:LOCALAPPDATA\Microsoft\VisualStudio\*\ComponentModelCache",
-            "$env:LOCALAPPDATA\Microsoft\VisualStudio\*\Extensions"
+            "$env:LOCALAPPDATA\Microsoft\VisualStudio\*\Extensions",
+            "$env:TEMP\VCTempBuild*"
         )
-        Description = "Visual Studio cache"
-        MinAgeInDays = 30
-        SafetyLevel = "Strict"
-    }
-
-    GitLFS = @{
-        Paths = @(
-            "$env:LOCALAPPDATA\lfs"
-        )
-        Description = "Git LFS cache"
-        MinAgeInDays = 90
-        SafetyLevel = "Normal"
+        Description = "Visual Studio component and build caches"
+        Category = "IDE"
+        CanRegenerate = $true
+        CommandToRegenerate = "Restart Visual Studio (cache regenerates automatically)"
     }
 }
 
@@ -147,260 +122,177 @@ $script:DevLocations = @{
 
 #region Private Functions
 
-function Find-DevFolders {
+function Get-CacheSize {
     <#
     .SYNOPSIS
-        Finds development folders matching pattern.
+        Calculates total size of cache directory.
     #>
     [CmdletBinding()]
-    [OutputType([System.IO.DirectoryInfo[]])]
+    [OutputType([long])]
     param(
         [Parameter(Mandatory)]
-        [string[]]$SearchPaths,
-
-        [Parameter(Mandatory)]
-        [string[]]$Pattern,
-
-        [Parameter()]
-        [int]$MinAgeInDays = 0,
-
-        [Parameter()]
-        [int]$MaxDepth = 5
-    )
-
-    $results = @()
-    $cutoffDate = if ($MinAgeInDays -gt 0) {
-        (Get-Date).AddDays(-$MinAgeInDays)
-    } else {
-        $null
-    }
-
-    foreach ($searchPath in $SearchPaths) {
-        $expandedPath = [Environment]::ExpandEnvironmentVariables($searchPath)
-
-        if (-not (Test-Path $expandedPath)) {
-            Write-Verbose "Search path does not exist: $expandedPath"
-            continue
-        }
-
-        Write-Verbose "Searching in: $expandedPath"
-
-        try {
-            # Find matching folders
-            $folders = Get-ChildItem -Path $expandedPath -Directory -Recurse -Force -ErrorAction SilentlyContinue -Depth $MaxDepth |
-                Where-Object {
-                    $folderName = $_.Name
-                    $matchesPattern = $false
-
-                    foreach ($p in $Pattern) {
-                        if ($folderName -eq $p) {
-                            $matchesPattern = $true
-                            break
-                        }
-                    }
-
-                    if (-not $matchesPattern) {
-                        return $false
-                    }
-
-                    # Check age
-                    if ($cutoffDate -and $_.LastWriteTime -gt $cutoffDate) {
-                        return $false
-                    }
-
-                    return $true
-                }
-
-            $results += $folders
-        }
-        catch {
-            Write-Verbose "Error searching $expandedPath`: $_"
-        }
-    }
-
-    return $results
-}
-
-function Get-DevFolderSize {
-    <#
-    .SYNOPSIS
-        Calculates total size of development folders.
-    #>
-    [CmdletBinding()]
-    [OutputType([hashtable])]
-    param(
-        [Parameter(Mandatory)]
-        [System.IO.DirectoryInfo[]]$Folders
+        [string]$Path
     )
 
     $totalSize = 0
-    $totalCount = $Folders.Count
+    $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
 
-    foreach ($folder in $Folders) {
-        try {
-            $size = (Get-ChildItem -Path $folder.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
-                Measure-Object -Property Length -Sum).Sum
-
-            if ($null -ne $size) {
-                $totalSize += $size
-            }
+    try {
+        if (-not (Test-Path $expandedPath)) {
+            return 0
         }
-        catch {
-            Write-Verbose "Failed to calculate size for $($folder.FullName): $_"
-        }
-    }
 
-    return @{
-        Count = $totalCount
-        Size = $totalSize
-    }
-}
-
-function Remove-DevFolders {
-    <#
-    .SYNOPSIS
-        Removes development folders.
-    #>
-    [CmdletBinding(SupportsShouldProcess)]
-    [OutputType([PSCustomObject])]
-    param(
-        [Parameter(Mandatory)]
-        [System.IO.DirectoryInfo[]]$Folders,
-
-        [Parameter()]
-        [switch]$UseTrash,
-
-        [Parameter()]
-        [string]$LocationName
-    )
-
-    $removedCount = 0
-    $removedSize = 0
-    $failedCount = 0
-    $errors = @()
-
-    foreach ($folder in $Folders) {
-        try {
-            # Calculate size before removal
-            $size = (Get-ChildItem -Path $folder.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
-                Measure-Object -Property Length -Sum).Sum
-
-            if ($null -eq $size) {
-                $size = 0
-            }
-
-            if ($PSCmdlet.ShouldProcess($folder.FullName, "Remove development folder")) {
-                if ($UseTrash) {
-                    Move-WinOpsToTrash -Path $folder.FullName -Module $LocationName -ErrorAction Stop | Out-Null
-                } else {
-                    Remove-Item -Path $folder.FullName -Recurse -Force -ErrorAction Stop
+        # Handle wildcard paths
+        if ($expandedPath -like '*`**') {
+            $items = Get-ChildItem -Path $expandedPath -Directory -Force -ErrorAction SilentlyContinue
+            foreach ($item in $items) {
+                $size = (Get-ChildItem -Path $item.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                    Measure-Object -Property Length -Sum).Sum
+                if ($null -ne $size) {
+                    $totalSize += $size
                 }
-
-                $removedCount++
-                $removedSize += $size
-                Write-Verbose "Removed: $($folder.FullName) ($size bytes)"
+            }
+        } else {
+            $size = (Get-ChildItem -Path $expandedPath -Recurse -File -Force -ErrorAction SilentlyContinue |
+                Measure-Object -Property Length -Sum).Sum
+            if ($null -ne $size) {
+                $totalSize = $size
             }
         }
-        catch {
-            $failedCount++
-            $errorMsg = "Failed to remove $($folder.FullName): $_"
-            $errors += $errorMsg
-            Write-Verbose $errorMsg
-        }
+    }
+    catch {
+        Write-Verbose "Failed to calculate size for $expandedPath`: $_"
     }
 
-    return [PSCustomObject]@{
-        RemovedCount = $removedCount
-        RemovedSize = $removedSize
-        FailedCount = $failedCount
-        Errors = $errors
-    }
+    return $totalSize
 }
 
-function Remove-DevCacheFiles {
+function Remove-CacheDirectory {
     <#
     .SYNOPSIS
-        Removes files from development cache paths.
+        Removes cache directory with safety checks.
     #>
     [CmdletBinding(SupportsShouldProcess)]
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory)]
-        [string[]]$Paths,
-
-        [Parameter()]
-        [int]$MinAgeInDays = 0,
+        [string]$Path,
 
         [Parameter()]
         [switch]$UseTrash,
 
         [Parameter()]
-        [string]$LocationName
+        [string]$CacheName
     )
 
-    $removedCount = 0
     $removedSize = 0
+    $removedCount = 0
     $failedCount = 0
     $errors = @()
 
-    $cutoffDate = if ($MinAgeInDays -gt 0) {
-        (Get-Date).AddDays(-$MinAgeInDays)
-    } else {
-        $null
-    }
+    $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
 
-    foreach ($path in $Paths) {
-        $expandedPath = [Environment]::ExpandEnvironmentVariables($path)
-
+    try {
         if (-not (Test-Path $expandedPath)) {
             Write-Verbose "Path does not exist: $expandedPath"
-            continue
-        }
-
-        try {
-            $items = Get-ChildItem -Path $expandedPath -Recurse -Force -ErrorAction Stop
-
-            foreach ($item in $items) {
-                try {
-                    if ($cutoffDate -and $item.LastWriteTime -gt $cutoffDate) {
-                        continue
-                    }
-
-                    $itemSize = if ($item.PSIsContainer) {
-                        $childSize = (Get-ChildItem -Path $item.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
-                            Measure-Object -Property Length -Sum).Sum
-                        if ($null -eq $childSize) { 0 } else { $childSize }
-                    } else {
-                        $item.Length
-                    }
-
-                    if ($PSCmdlet.ShouldProcess($item.FullName, "Remove cache item")) {
-                        if ($UseTrash) {
-                            Move-WinOpsToTrash -Path $item.FullName -Module $LocationName -ErrorAction Stop | Out-Null
-                        } else {
-                            Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction Stop
-                        }
-
-                        $removedCount++
-                        $removedSize += $itemSize
-                    }
-                }
-                catch {
-                    $failedCount++
-                    $errors += "Failed to remove $($item.FullName): $_"
-                }
+            return [PSCustomObject]@{
+                RemovedSize = 0
+                RemovedCount = 0
+                FailedCount = 0
+                Errors = @()
             }
         }
-        catch {
-            $errors += "Failed to access $expandedPath`: $_"
+
+        # Handle wildcard paths (e.g., VisualStudio\*\ComponentModelCache)
+        if ($expandedPath -like '*`**') {
+            $items = Get-ChildItem -Path $expandedPath -Force -ErrorAction SilentlyContinue
+        } else {
+            $items = @(Get-Item -Path $expandedPath -Force -ErrorAction SilentlyContinue)
         }
+
+        foreach ($item in $items) {
+            try {
+                # Calculate size before removal
+                $itemSize = if ($item.PSIsContainer) {
+                    $childSize = (Get-ChildItem -Path $item.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                        Measure-Object -Property Length -Sum).Sum
+                    if ($null -eq $childSize) { 0 } else { $childSize }
+                } else {
+                    $item.Length
+                }
+
+                # Safety check: verify path is safe to delete
+                if (-not (Test-WinOpsPathSafe -Path $item.FullName)) {
+                    Write-Verbose "Skipping protected path: $($item.FullName)"
+                    $failedCount++
+                    continue
+                }
+
+                if ($PSCmdlet.ShouldProcess($item.FullName, "Remove $CacheName cache")) {
+                    if ($UseTrash) {
+                        Move-WinOpsToTrash -Path $item.FullName -Module "DevCleanup.$CacheName" -ErrorAction Stop | Out-Null
+                    } else {
+                        Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction Stop
+                    }
+
+                    $removedSize += $itemSize
+                    $removedCount++
+                    Write-Verbose "Removed: $($item.FullName) ($itemSize bytes)"
+                }
+            }
+            catch {
+                $failedCount++
+                $errorMsg = "Failed to remove $($item.FullName): $_"
+                $errors += $errorMsg
+                Write-Verbose $errorMsg
+            }
+        }
+    }
+    catch {
+        $errorMsg = "Failed to access path $expandedPath`: $_"
+        $errors += $errorMsg
+        Write-Verbose $errorMsg
     }
 
     return [PSCustomObject]@{
-        RemovedCount = $removedCount
         RemovedSize = $removedSize
+        RemovedCount = $removedCount
         FailedCount = $failedCount
         Errors = $errors
+    }
+}
+
+function Test-ToolInstalled {
+    <#
+    .SYNOPSIS
+        Checks if a development tool is installed by checking cache existence.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)]
+        [hashtable]$CacheTarget
+    )
+
+    if ($CacheTarget.ContainsKey('Paths')) {
+        # Multiple paths - check if any exist
+        foreach ($path in $CacheTarget.Paths) {
+            $expandedPath = [Environment]::ExpandEnvironmentVariables($path)
+            if ($expandedPath -like '*`**') {
+                # Wildcard path
+                $items = Get-ChildItem -Path $expandedPath -Force -ErrorAction SilentlyContinue
+                if ($items) {
+                    return $true
+                }
+            } elseif (Test-Path $expandedPath) {
+                return $true
+            }
+        }
+        return $false
+    } else {
+        # Single path
+        $expandedPath = [Environment]::ExpandEnvironmentVariables($CacheTarget.Path)
+        return (Test-Path $expandedPath)
     }
 }
 
@@ -408,279 +300,392 @@ function Remove-DevCacheFiles {
 
 #region Public Functions
 
-function Clear-WinOpsDevCache {
+function Get-WinOpsDevCacheTargets {
     <#
     .SYNOPSIS
-        Clears development tool caches and build artifacts.
+        Gets information about all development tool cache targets.
 
     .DESCRIPTION
-        Removes development caches, node_modules, build outputs, and package caches.
+        Retrieves size and status information for all configured development caches.
 
-    .PARAMETER Location
-        Location to clean. Valid values:
-        - NodeModules, NpmCache, YarnCache, PythonCache, PipCache, NuGetCache,
-          DotNetBuildOutput, MavenCache, GradleCache, VSCodeCache, VisualStudioCache, GitLFS, All
+    .PARAMETER Category
+        Filter by category: PackageManager, IDE, or All
 
-    .PARAMETER MinAgeInDays
-        Only remove items older than specified days (0 = use default per location).
-
-    .PARAMETER UseTrash
-        Move items to trash instead of permanent deletion.
-
-    .PARAMETER DryRun
-        Show what would be removed without actually removing.
-
-    .PARAMETER Force
-        Bypass confirmation prompts.
-
-    .PARAMETER MaxSearchDepth
-        Maximum directory depth to search for folders (default: 5).
+    .PARAMETER IncludeEmpty
+        Include cache targets that don't exist or are empty
 
     .EXAMPLE
-        Clear-WinOpsDevCache -Location NodeModules -MinAgeInDays 60
-        # Removes node_modules folders older than 60 days
+        Get-WinOpsDevCacheTargets
+        # Shows all cache targets with sizes
 
     .EXAMPLE
-        Clear-WinOpsDevCache -Location NpmCache -UseTrash
-        # Clears npm cache with recovery option
-
-    .EXAMPLE
-        Clear-WinOpsDevCache -Location All -DryRun
-        # Shows what would be removed from all dev caches
-    #>
-    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
-    [OutputType([PSCustomObject[]])]
-    param(
-        [Parameter(Mandatory)]
-        [ValidateSet(
-            'NodeModules', 'NpmCache', 'YarnCache', 'PythonCache', 'PipCache',
-            'NuGetCache', 'DotNetBuildOutput', 'MavenCache', 'GradleCache',
-            'VSCodeCache', 'VisualStudioCache', 'GitLFS', 'All'
-        )]
-        [string]$Location,
-
-        [Parameter()]
-        [ValidateRange(0, 365)]
-        [int]$MinAgeInDays = 0,
-
-        [Parameter()]
-        [switch]$UseTrash,
-
-        [Parameter()]
-        [switch]$DryRun,
-
-        [Parameter()]
-        [switch]$Force,
-
-        [Parameter()]
-        [ValidateRange(1, 10)]
-        [int]$MaxSearchDepth = 5
-    )
-
-    Write-WinOpsLog -Level INFO -Message "Starting dev cache cleanup: $Location"
-
-    $locationsToClean = if ($Location -eq 'All') {
-        $script:DevLocations.Keys
-    } else {
-        @($Location)
-    }
-
-    $results = @()
-
-    foreach ($locationKey in $locationsToClean) {
-        $locationInfo = $script:DevLocations[$locationKey]
-
-        Write-Verbose "Processing location: $locationKey - $($locationInfo.Description)"
-
-        $effectiveAge = if ($MinAgeInDays -gt 0) {
-            $MinAgeInDays
-        } else {
-            $locationInfo.MinAgeInDays
-        }
-
-        # Handle search-based locations (node_modules, __pycache__, bin/obj)
-        if ($locationInfo.SearchPaths) {
-            Write-Verbose "Searching for $($locationInfo.Pattern) folders..."
-
-            $folders = Find-DevFolders `
-                -SearchPaths $locationInfo.SearchPaths `
-                -Pattern $locationInfo.Pattern `
-                -MinAgeInDays $effectiveAge `
-                -MaxDepth $MaxSearchDepth
-
-            if ($folders.Count -eq 0) {
-                Write-Verbose "No folders found for: $locationKey"
-                continue
-            }
-
-            $folderInfo = Get-DevFolderSize -Folders $folders
-
-            Write-Verbose "Found $($folderInfo.Count) folders ($([math]::Round($folderInfo.Size / 1GB, 2)) GB) for $locationKey"
-
-            if ($DryRun) {
-                $results += [PSCustomObject]@{
-                    Location = $locationKey
-                    Description = $locationInfo.Description
-                    FolderCount = $folderInfo.Count
-                    TotalSize = $folderInfo.Size
-                    MinAgeInDays = $effectiveAge
-                    WouldRemove = $true
-                    RemovedCount = 0
-                    RemovedSize = 0
-                }
-                continue
-            }
-
-            if (-not $Force -and -not $PSCmdlet.ShouldProcess(
-                "$locationKey - $($folderInfo.Count) folders ($([math]::Round($folderInfo.Size / 1GB, 2)) GB)",
-                "Remove development folders"
-            )) {
-                Write-Verbose "Skipped by user: $locationKey"
-                continue
-            }
-
-            $removeResult = Remove-DevFolders `
-                -Folders $folders `
-                -UseTrash:$UseTrash `
-                -LocationName $locationKey
-
-            $results += [PSCustomObject]@{
-                Location = $locationKey
-                Description = $locationInfo.Description
-                FolderCount = $folderInfo.Count
-                TotalSize = $folderInfo.Size
-                MinAgeInDays = $effectiveAge
-                RemovedCount = $removeResult.RemovedCount
-                RemovedSize = $removeResult.RemovedSize
-                FailedCount = $removeResult.FailedCount
-                Errors = $removeResult.Errors
-            }
-
-            Write-WinOpsLog -Level INFO -Message "Cleaned $locationKey`: Removed $($removeResult.RemovedCount) folders ($([math]::Round($removeResult.RemovedSize / 1GB, 2)) GB)"
-        }
-        # Handle path-based locations (npm cache, pip cache, etc.)
-        else {
-            $removeResult = Remove-DevCacheFiles `
-                -Paths $locationInfo.Paths `
-                -MinAgeInDays $effectiveAge `
-                -UseTrash:$UseTrash `
-                -LocationName $locationKey
-
-            if ($removeResult.RemovedCount -eq 0 -and $removeResult.FailedCount -eq 0) {
-                Write-Verbose "No cache found for: $locationKey"
-                continue
-            }
-
-            $results += [PSCustomObject]@{
-                Location = $locationKey
-                Description = $locationInfo.Description
-                MinAgeInDays = $effectiveAge
-                RemovedCount = $removeResult.RemovedCount
-                RemovedSize = $removeResult.RemovedSize
-                FailedCount = $removeResult.FailedCount
-                Errors = $removeResult.Errors
-            }
-
-            Write-WinOpsLog -Level INFO -Message "Cleaned $locationKey`: Removed $($removeResult.RemovedCount) items ($([math]::Round($removeResult.RemovedSize / 1MB, 2)) MB)"
-        }
-    }
-
-    $totalRemoved = ($results | Measure-Object -Property RemovedSize -Sum).Sum
-    $totalCount = ($results | Measure-Object -Property RemovedCount -Sum).Sum
-
-    Write-WinOpsLog -Level INFO -Message "Dev cache cleanup complete: Removed $totalCount items ($([math]::Round($totalRemoved / 1GB, 2)) GB)"
-
-    return $results
-}
-
-function Get-WinOpsDevCacheInfo {
-    <#
-    .SYNOPSIS
-        Gets information about development caches without removing them.
-
-    .DESCRIPTION
-        Scans and reports on development cache sizes.
-
-    .PARAMETER Location
-        Location to query. Valid values: NodeModules, NpmCache, etc., or All.
-
-    .PARAMETER MinAgeInDays
-        Only count items older than specified days.
-
-    .PARAMETER MaxSearchDepth
-        Maximum directory depth to search.
-
-    .EXAMPLE
-        Get-WinOpsDevCacheInfo -Location All
-        # Shows sizes for all dev caches
-
-    .EXAMPLE
-        Get-WinOpsDevCacheInfo -Location NodeModules -MinAgeInDays 90
-        # Shows node_modules folders older than 90 days
+        Get-WinOpsDevCacheTargets -Category PackageManager
+        # Shows only package manager caches
     #>
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
         [Parameter()]
-        [ValidateSet(
-            'NodeModules', 'NpmCache', 'YarnCache', 'PythonCache', 'PipCache',
-            'NuGetCache', 'DotNetBuildOutput', 'MavenCache', 'GradleCache',
-            'VSCodeCache', 'VisualStudioCache', 'GitLFS', 'All'
-        )]
-        [string]$Location = 'All',
+        [ValidateSet('PackageManager', 'IDE', 'All')]
+        [string]$Category = 'All',
 
         [Parameter()]
-        [ValidateRange(0, 365)]
-        [int]$MinAgeInDays = 0,
-
-        [Parameter()]
-        [ValidateRange(1, 10)]
-        [int]$MaxSearchDepth = 5
+        [switch]$IncludeEmpty
     )
-
-    $locationsToQuery = if ($Location -eq 'All') {
-        $script:DevLocations.Keys
-    } else {
-        @($Location)
-    }
 
     $results = @()
 
-    foreach ($locationKey in $locationsToQuery) {
-        $locationInfo = $script:DevLocations[$locationKey]
+    foreach ($key in $script:DevCacheTargets.Keys) {
+        $target = $script:DevCacheTargets[$key]
 
-        Write-Verbose "Querying: $locationKey"
+        if ($Category -ne 'All' -and $target.Category -ne $Category) {
+            continue
+        }
 
-        $effectiveAge = if ($MinAgeInDays -gt 0) { $MinAgeInDays } else { $locationInfo.MinAgeInDays }
+        $isInstalled = Test-ToolInstalled -CacheTarget $target
 
-        if ($locationInfo.SearchPaths) {
-            $folders = Find-DevFolders `
-                -SearchPaths $locationInfo.SearchPaths `
-                -Pattern $locationInfo.Pattern `
-                -MinAgeInDays $effectiveAge `
-                -MaxDepth $MaxSearchDepth
+        if (-not $isInstalled -and -not $IncludeEmpty) {
+            continue
+        }
 
-            $folderInfo = Get-DevFolderSize -Folders $folders
-
-            $results += [PSCustomObject]@{
-                Location = $locationKey
-                Description = $locationInfo.Description
-                ItemCount = $folderInfo.Count
-                TotalSize = $folderInfo.Size
-                TotalSizeMB = [math]::Round($folderInfo.Size / 1MB, 2)
-                TotalSizeGB = [math]::Round($folderInfo.Size / 1GB, 2)
-                MinAgeInDays = $effectiveAge
+        # Calculate total size
+        $totalSize = 0
+        if ($target.ContainsKey('Paths')) {
+            foreach ($path in $target.Paths) {
+                $totalSize += Get-CacheSize -Path $path
             }
+        } else {
+            $totalSize = Get-CacheSize -Path $target.Path
+        }
+
+        if ($totalSize -eq 0 -and -not $IncludeEmpty) {
+            continue
+        }
+
+        $results += [PSCustomObject]@{
+            Key = $key
+            Name = $target.Name
+            Description = $target.Description
+            Category = $target.Category
+            TotalSize = $totalSize
+            TotalSizeMB = [math]::Round($totalSize / 1MB, 2)
+            TotalSizeGB = [math]::Round($totalSize / 1GB, 3)
+            Installed = $isInstalled
+            CanRegenerate = $target.CanRegenerate
+            RegenerateCommand = $target.CommandToRegenerate
         }
     }
 
     return $results | Sort-Object TotalSize -Descending
 }
 
+function Invoke-WinOpsDevCleanup {
+    <#
+    .SYNOPSIS
+        Cleans development tool caches.
+
+    .DESCRIPTION
+        Removes cache files from specified development tools with safety checks.
+
+    .PARAMETER Target
+        Cache target to clean. Use Get-WinOpsDevCacheTargets to see available targets.
+        Special value 'All' cleans all available caches.
+
+    .PARAMETER Category
+        Clean all caches in a category: PackageManager or IDE
+
+    .PARAMETER UseTrash
+        Move files to trash instead of permanent deletion.
+
+    .PARAMETER Force
+        Bypass confirmation prompts.
+
+    .PARAMETER DryRun
+        Show what would be removed without actually removing.
+
+    .EXAMPLE
+        Invoke-WinOpsDevCleanup -Target npm
+        # Cleans npm cache
+
+    .EXAMPLE
+        Invoke-WinOpsDevCleanup -Category PackageManager -UseTrash
+        # Cleans all package manager caches with recovery option
+
+    .EXAMPLE
+        Invoke-WinOpsDevCleanup -Target All -DryRun
+        # Shows what would be cleaned without removing anything
+    #>
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+    [OutputType([PSCustomObject[]])]
+    param(
+        [Parameter(ParameterSetName = 'ByTarget')]
+        [ArgumentCompleter({
+            param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+            @('All') + $script:DevCacheTargets.Keys | Where-Object { $_ -like "$wordToComplete*" }
+        })]
+        [string]$Target,
+
+        [Parameter(ParameterSetName = 'ByCategory')]
+        [ValidateSet('PackageManager', 'IDE')]
+        [string]$Category,
+
+        [Parameter()]
+        [switch]$UseTrash,
+
+        [Parameter()]
+        [switch]$Force,
+
+        [Parameter()]
+        [switch]$DryRun
+    )
+
+    Write-WinOpsLog -Level INFO -Message "Starting development cache cleanup"
+
+    # Determine targets to clean
+    $targetsToClean = @()
+
+    if ($PSCmdlet.ParameterSetName -eq 'ByTarget') {
+        if ($Target -eq 'All') {
+            $targetsToClean = $script:DevCacheTargets.Keys
+        } elseif ($script:DevCacheTargets.ContainsKey($Target)) {
+            $targetsToClean = @($Target)
+        } else {
+            Write-Error "Unknown target: $Target. Use Get-WinOpsDevCacheTargets to see available targets."
+            return
+        }
+    } elseif ($PSCmdlet.ParameterSetName -eq 'ByCategory') {
+        $targetsToClean = $script:DevCacheTargets.Keys | Where-Object {
+            $script:DevCacheTargets[$_].Category -eq $Category
+        }
+    } else {
+        Write-Error "Must specify either -Target or -Category parameter"
+        return
+    }
+
+    $results = @()
+
+    foreach ($targetKey in $targetsToClean) {
+        $targetInfo = $script:DevCacheTargets[$targetKey]
+
+        Write-Verbose "Processing: $($targetInfo.Name)"
+
+        # Check if tool is installed
+        $isInstalled = Test-ToolInstalled -CacheTarget $targetInfo
+
+        if (-not $isInstalled) {
+            Write-Verbose "$($targetInfo.Name) not found (not installed or already clean)"
+            continue
+        }
+
+        # Calculate current size
+        $currentSize = 0
+        $paths = if ($targetInfo.ContainsKey('Paths')) {
+            $targetInfo.Paths
+        } else {
+            @($targetInfo.Path)
+        }
+
+        foreach ($path in $paths) {
+            $currentSize += Get-CacheSize -Path $path
+        }
+
+        if ($currentSize -eq 0) {
+            Write-Verbose "$($targetInfo.Name) is empty"
+            continue
+        }
+
+        Write-Verbose "Cache size: $($targetInfo.Name) = $([math]::Round($currentSize / 1MB, 2)) MB"
+
+        if ($DryRun) {
+            $results += [PSCustomObject]@{
+                Target = $targetInfo.Name
+                Category = $targetInfo.Category
+                Description = $targetInfo.Description
+                CurrentSize = $currentSize
+                CurrentSizeMB = [math]::Round($currentSize / 1MB, 2)
+                WouldRemove = $true
+                RemovedCount = 0
+                RemovedSize = 0
+                RegenerateCommand = $targetInfo.CommandToRegenerate
+            }
+            continue
+        }
+
+        # Confirmation
+        if (-not $Force -and -not $PSCmdlet.ShouldProcess(
+            "$($targetInfo.Name) ($([math]::Round($currentSize / 1MB, 2)) MB)",
+            "Clear cache"
+        )) {
+            Write-Verbose "Skipped by user: $($targetInfo.Name)"
+            continue
+        }
+
+        # Remove cache
+        $totalRemoved = 0
+        $totalRemovedSize = 0
+        $totalFailed = 0
+        $allErrors = @()
+
+        foreach ($path in $paths) {
+            $removeResult = Remove-CacheDirectory `
+                -Path $path `
+                -UseTrash:$UseTrash `
+                -CacheName $targetInfo.Name
+
+            $totalRemoved += $removeResult.RemovedCount
+            $totalRemovedSize += $removeResult.RemovedSize
+            $totalFailed += $removeResult.FailedCount
+            $allErrors += $removeResult.Errors
+        }
+
+        $results += [PSCustomObject]@{
+            Target = $targetInfo.Name
+            Category = $targetInfo.Category
+            Description = $targetInfo.Description
+            CurrentSize = $currentSize
+            CurrentSizeMB = [math]::Round($currentSize / 1MB, 2)
+            RemovedCount = $totalRemoved
+            RemovedSize = $totalRemovedSize
+            RemovedSizeMB = [math]::Round($totalRemovedSize / 1MB, 2)
+            FailedCount = $totalFailed
+            Errors = $allErrors
+            RegenerateCommand = $targetInfo.CommandToRegenerate
+        }
+
+        Write-WinOpsLog -Level INFO -Message "Cleaned $($targetInfo.Name): Removed $totalRemoved items ($([math]::Round($totalRemovedSize / 1MB, 2)) MB)"
+    }
+
+    # Summary
+    $totalRemoved = ($results | Measure-Object -Property RemovedSize -Sum).Sum
+    $totalCount = ($results | Measure-Object -Property RemovedCount -Sum).Sum
+
+    if ($DryRun) {
+        $potentialSavings = ($results | Measure-Object -Property CurrentSize -Sum).Sum
+        Write-WinOpsLog -Level INFO -Message "Development cache cleanup (DRY RUN): Would remove $($results.Count) cache types ($([math]::Round($potentialSavings / 1MB, 2)) MB)"
+    } else {
+        Write-WinOpsLog -Level INFO -Message "Development cache cleanup complete: Removed $totalCount items ($([math]::Round($totalRemoved / 1MB, 2)) MB)"
+    }
+
+    return $results
+}
+
+function Find-WinOpsNodeModules {
+    <#
+    .SYNOPSIS
+        Finds large node_modules directories in the system.
+
+    .DESCRIPTION
+        Scans specified paths for node_modules directories and reports their sizes.
+        Useful for identifying space-consuming JavaScript project dependencies.
+
+    .PARAMETER Path
+        Path to scan for node_modules. Defaults to user profile.
+
+    .PARAMETER MinSizeMB
+        Minimum size threshold in MB to report (default: 100 MB)
+
+    .PARAMETER MaxDepth
+        Maximum directory depth to scan (default: 5)
+
+    .PARAMETER TopN
+        Return only top N largest directories (default: 20)
+
+    .EXAMPLE
+        Find-WinOpsNodeModules
+        # Finds large node_modules in user profile
+
+    .EXAMPLE
+        Find-WinOpsNodeModules -Path "C:\Projects" -MinSizeMB 500
+        # Finds node_modules larger than 500 MB in Projects folder
+
+    .EXAMPLE
+        Find-WinOpsNodeModules -TopN 10
+        # Returns top 10 largest node_modules directories
+    #>
+    [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
+    param(
+        [Parameter()]
+        [string]$Path = $env:USERPROFILE,
+
+        [Parameter()]
+        [int]$MinSizeMB = 100,
+
+        [Parameter()]
+        [int]$MaxDepth = 5,
+
+        [Parameter()]
+        [int]$TopN = 20
+    )
+
+    Write-WinOpsLog -Level INFO -Message "Scanning for node_modules directories in: $Path"
+
+    $results = @()
+    $scanQueue = [System.Collections.Generic.Queue[PSCustomObject]]::new()
+    $scanQueue.Enqueue([PSCustomObject]@{ Path = $Path; Depth = 0 })
+
+    while ($scanQueue.Count -gt 0) {
+        $current = $scanQueue.Dequeue()
+
+        if ($current.Depth -ge $MaxDepth) {
+            continue
+        }
+
+        try {
+            $directories = Get-ChildItem -Path $current.Path -Directory -Force -ErrorAction SilentlyContinue |
+                Where-Object { -not $_.Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint) }
+
+            foreach ($dir in $directories) {
+                if ($dir.Name -eq 'node_modules') {
+                    # Found node_modules - calculate size
+                    Write-Verbose "Found node_modules: $($dir.FullName)"
+
+                    $size = (Get-ChildItem -Path $dir.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                        Measure-Object -Property Length -Sum).Sum
+
+                    if ($null -eq $size) { $size = 0 }
+
+                    $sizeMB = [math]::Round($size / 1MB, 2)
+
+                    if ($sizeMB -ge $MinSizeMB) {
+                        $results += [PSCustomObject]@{
+                            Path = $dir.FullName
+                            ParentProject = Split-Path $dir.FullName -Parent
+                            Size = $size
+                            SizeMB = $sizeMB
+                            SizeGB = [math]::Round($size / 1GB, 3)
+                            LastModified = $dir.LastWriteTime
+                        }
+                    }
+
+                    # Don't recurse into node_modules
+                    continue
+                }
+
+                # Add directory to scan queue
+                $scanQueue.Enqueue([PSCustomObject]@{
+                    Path = $dir.FullName
+                    Depth = $current.Depth + 1
+                })
+            }
+        }
+        catch {
+            Write-Verbose "Failed to scan $($current.Path): $_"
+        }
+    }
+
+    Write-WinOpsLog -Level INFO -Message "Found $($results.Count) node_modules directories"
+
+    return $results |
+        Sort-Object Size -Descending |
+        Select-Object -First $TopN
+}
+
 #endregion
 
 # Export functions
 Export-ModuleMember -Function @(
-    'Clear-WinOpsDevCache',
-    'Get-WinOpsDevCacheInfo'
+    'Get-WinOpsDevCacheTargets',
+    'Invoke-WinOpsDevCleanup',
+    'Find-WinOpsNodeModules'
 )

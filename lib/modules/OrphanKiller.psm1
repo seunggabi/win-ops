@@ -129,7 +129,7 @@ function Find-WinOpsOrphanedProcess {
         Identifies processes that have lost their parent process or are leaked background processes.
 
     .PARAMETER MinimumAgeMinutes
-        Minimum age in minutes for a process to be considered orphaned (default: 5).
+        Minimum age in minutes for a process to be considered orphaned (default: 1440 = 24 hours).
         This prevents flagging recently started processes.
 
     .PARAMETER IncludeConsoleLess
@@ -143,7 +143,7 @@ function Find-WinOpsOrphanedProcess {
 
     .EXAMPLE
         Find-WinOpsOrphanedProcess
-        # Finds basic orphaned processes
+        # Finds basic orphaned processes (24+ hours old)
 
     .EXAMPLE
         Find-WinOpsOrphanedProcess -MinimumAgeMinutes 30 -IncludeConsoleLess
@@ -154,7 +154,7 @@ function Find-WinOpsOrphanedProcess {
     param(
         [Parameter()]
         [ValidateRange(0, 10080)]
-        [int]$MinimumAgeMinutes = 5,
+        [int]$MinimumAgeMinutes = 1440,
 
         [Parameter()]
         [switch]$IncludeConsoleLess,
@@ -430,7 +430,7 @@ function Invoke-WinOpsOrphanCleanup {
         Scans for and terminates orphaned processes in one operation.
 
     .PARAMETER MinimumAgeMinutes
-        Minimum age in minutes for processes to be considered orphaned.
+        Minimum age in minutes for processes to be considered orphaned (default: 1440 = 24 hours).
 
     .PARAMETER IncludeConsoleLess
         Include console-less background processes.
@@ -443,7 +443,7 @@ function Invoke-WinOpsOrphanCleanup {
 
     .EXAMPLE
         Invoke-WinOpsOrphanCleanup -DryRun
-        # Shows orphaned processes without killing them
+        # Shows orphaned processes without killing them (24+ hours old)
 
     .EXAMPLE
         Invoke-WinOpsOrphanCleanup -MinimumAgeMinutes 60 -Force
@@ -454,7 +454,7 @@ function Invoke-WinOpsOrphanCleanup {
     param(
         [Parameter()]
         [ValidateRange(0, 10080)]
-        [int]$MinimumAgeMinutes = 30,
+        [int]$MinimumAgeMinutes = 1440,
 
         [Parameter()]
         [switch]$IncludeConsoleLess,

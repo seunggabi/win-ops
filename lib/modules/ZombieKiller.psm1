@@ -127,7 +127,7 @@ function Find-WinOpsZombieProcess {
 
     .DESCRIPTION
         Identifies problematic processes based on criteria:
-        - Non-responding processes
+        - Non-responding processes (with 30-second reconfirmation)
         - High CPU usage (sustained)
         - High memory usage
         - Processes without windows (potential leaks)
@@ -150,9 +150,12 @@ function Find-WinOpsZombieProcess {
     .PARAMETER ExcludeProcessNames
         Process names to exclude from detection.
 
+    .PARAMETER SkipReconfirmation
+        Skip the 30-second reconfirmation check for non-responding processes.
+
     .EXAMPLE
         Find-WinOpsZombieProcess -IncludeNonResponding
-        # Finds all non-responding processes
+        # Finds all non-responding processes (with 30-second reconfirmation)
 
     .EXAMPLE
         Find-WinOpsZombieProcess -IncludeHighCPU -CPUThreshold 80
@@ -179,7 +182,10 @@ function Find-WinOpsZombieProcess {
         [switch]$IncludeHighMemory,
 
         [Parameter()]
-        [string[]]$ExcludeProcessNames = @()
+        [string[]]$ExcludeProcessNames = @(),
+
+        [Parameter()]
+        [switch]$SkipReconfirmation
     )
 
     Write-WinOpsLog -Level INFO -Message "Scanning for zombie processes..."
@@ -190,8 +196,10 @@ function Find-WinOpsZombieProcess {
     }
 
     $zombieProcesses = @()
+    $candidateProcesses = @()
     $allProcesses = Get-Process -ErrorAction SilentlyContinue
 
+    # First pass: identify candidates
     foreach ($process in $allProcesses) {
         try {
             # Skip excluded processes
@@ -240,18 +248,14 @@ function Find-WinOpsZombieProcess {
             }
 
             if ($isZombie) {
-                $zombieProcesses += [PSCustomObject]@{
+                $candidateProcesses += [PSCustomObject]@{
                     ProcessId = $process.Id
                     ProcessName = $process.ProcessName
-                    MainWindowTitle = $process.MainWindowTitle
-                    StartTime = try { $process.StartTime } catch { $null }
-                    CPUPercent = if ($IncludeHighCPU) { Get-ProcessCPUUsage -Process $process } else { 0 }
-                    MemoryMB = Get-ProcessMemoryUsageMB -Process $process
-                    Responding = Test-ProcessResponding -Process $process
-                    Reasons = $reasons -join ", "
+                    Reasons = $reasons
+                    NeedsReconfirmation = ($IncludeNonResponding -and ($reasons -contains "Not responding"))
                 }
 
-                Write-Verbose "Found zombie: $($process.ProcessName) (PID: $($process.Id)) - $($reasons -join ', ')"
+                Write-Verbose "Found zombie candidate: $($process.ProcessName) (PID: $($process.Id)) - $($reasons -join ', ')"
             }
         }
         catch {
@@ -259,7 +263,65 @@ function Find-WinOpsZombieProcess {
         }
     }
 
-    Write-WinOpsLog -Level INFO -Message "Found $($zombieProcesses.Count) zombie processes"
+    # Second pass: reconfirm non-responding processes after 30 seconds
+    if ($IncludeNonResponding -and -not $SkipReconfirmation) {
+        $needReconfirm = $candidateProcesses | Where-Object { $_.NeedsReconfirmation }
+
+        if ($needReconfirm.Count -gt 0) {
+            Write-WinOpsLog -Level INFO -Message "Waiting 30 seconds to reconfirm $($needReconfirm.Count) non-responding processes..."
+            Start-Sleep -Seconds 30
+
+            foreach ($candidate in $needReconfirm) {
+                try {
+                    $process = Get-Process -Id $candidate.ProcessId -ErrorAction SilentlyContinue
+                    if (-not $process) {
+                        Write-Verbose "Process $($candidate.ProcessName) (PID: $($candidate.ProcessId)) no longer exists"
+                        continue
+                    }
+
+                    # Recheck if still not responding
+                    $isResponding = Test-ProcessResponding -Process $process
+                    if ($isResponding) {
+                        Write-Verbose "Process $($candidate.ProcessName) (PID: $($candidate.ProcessId)) is now responding - removed from zombie list"
+                        # Remove from candidates
+                        $candidateProcesses = $candidateProcesses | Where-Object { $_.ProcessId -ne $candidate.ProcessId }
+                    }
+                    else {
+                        Write-Verbose "Process $($candidate.ProcessName) (PID: $($candidate.ProcessId)) still not responding after 30 seconds"
+                    }
+                }
+                catch {
+                    Write-Verbose "Error reconfirming process $($candidate.ProcessName): $_"
+                }
+            }
+        }
+    }
+
+    # Final pass: build result objects for confirmed zombies
+    foreach ($candidate in $candidateProcesses) {
+        try {
+            $process = Get-Process -Id $candidate.ProcessId -ErrorAction SilentlyContinue
+            if (-not $process) {
+                continue
+            }
+
+            $zombieProcesses += [PSCustomObject]@{
+                ProcessId = $process.Id
+                ProcessName = $process.ProcessName
+                MainWindowTitle = $process.MainWindowTitle
+                StartTime = try { $process.StartTime } catch { $null }
+                CPUPercent = if ($IncludeHighCPU) { Get-ProcessCPUUsage -Process $process } else { 0 }
+                MemoryMB = Get-ProcessMemoryUsageMB -Process $process
+                Responding = Test-ProcessResponding -Process $process
+                Reasons = $candidate.Reasons -join ", "
+            }
+        }
+        catch {
+            Write-Verbose "Error building zombie info for $($candidate.ProcessName): $_"
+        }
+    }
+
+    Write-WinOpsLog -Level INFO -Message "Found $($zombieProcesses.Count) confirmed zombie processes"
 
     return $zombieProcesses | Sort-Object MemoryMB -Descending
 }

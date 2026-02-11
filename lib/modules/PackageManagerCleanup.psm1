@@ -31,33 +31,48 @@ Import-Module (Join-Path $coreModulePath 'Trash.psm1') -Force
 $script:PackageManagers = @{
     Chocolatey = @{
         Name = "Chocolatey"
-        CachePath = "$env:ProgramData\chocolatey\lib-bad"
-        TempPath = "$env:TEMP\chocolatey"
+        CachePaths = @(
+            "$env:ProgramData\chocolatey\lib-bad",
+            "$env:ProgramData\chocolatey\lib-backup",
+            "$env:TEMP\chocolatey"
+        )
         Description = "Chocolatey package manager"
-        CleanCommand = "choco-cleanup"
         TestCommand = "choco"
     }
 
     Scoop = @{
         Name = "Scoop"
-        CachePath = "$env:USERPROFILE\scoop\cache"
+        CachePaths = @(
+            "$env:USERPROFILE\scoop\cache"
+        )
         Description = "Scoop package manager"
-        CleanCommand = "scoop-cleanup"
         TestCommand = "scoop"
     }
 
     Winget = @{
         Name = "Windows Package Manager"
-        CachePath = "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalCache"
+        CachePaths = @(
+            "$env:LOCALAPPDATA\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalCache"
+        )
         Description = "Windows Package Manager (winget)"
-        CleanCommand = $null
         TestCommand = "winget"
     }
 
     WindowsUpdate = @{
         Name = "Windows Update"
-        CachePath = "$env:SystemRoot\SoftwareDistribution\Download"
+        CachePaths = @(
+            "$env:SystemRoot\SoftwareDistribution\Download"
+        )
         Description = "Windows Update download cache"
+        RequiresElevation = $true
+    }
+
+    DISM = @{
+        Name = "DISM Logs"
+        CachePaths = @(
+            "$env:SystemRoot\Logs\DISM"
+        )
+        Description = "DISM and deployment logs"
         RequiresElevation = $true
     }
 }
@@ -101,6 +116,50 @@ function Test-PackageManagerInstalled {
     }
 }
 
+function Test-WindowsUpdateActive {
+    <#
+    .SYNOPSIS
+        Checks if Windows Update is currently running.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param()
+
+    try {
+        $wuService = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
+        if ($null -eq $wuService) {
+            return $false
+        }
+
+        # Check if service is running
+        if ($wuService.Status -ne 'Running') {
+            return $false
+        }
+
+        # Check for active update sessions
+        $updateSession = New-Object -ComObject Microsoft.Update.Session -ErrorAction SilentlyContinue
+        if ($null -ne $updateSession) {
+            $updateSearcher = $updateSession.CreateUpdateSearcher()
+
+            # If we can create a searcher and it's not busy, updates are not active
+            try {
+                $searchResult = $updateSearcher.Search("IsInstalled=0")
+                return $false
+            }
+            catch {
+                # If search fails, updates might be installing
+                return $true
+            }
+        }
+
+        return $false
+    }
+    catch {
+        Write-Verbose "Failed to check Windows Update status: $_"
+        return $false
+    }
+}
+
 function Get-PackageManagerCacheSize {
     <#
     .SYNOPSIS
@@ -110,29 +169,32 @@ function Get-PackageManagerCacheSize {
     [OutputType([long])]
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        [string[]]$Paths
     )
 
-    $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
+    $totalSize = 0
 
-    if (-not (Test-Path $expandedPath)) {
-        return 0
-    }
+    foreach ($path in $Paths) {
+        $expandedPath = [Environment]::ExpandEnvironmentVariables($path)
 
-    try {
-        $size = (Get-ChildItem -Path $expandedPath -Recurse -File -Force -ErrorAction SilentlyContinue |
-            Measure-Object -Property Length -Sum).Sum
-
-        if ($null -eq $size) {
-            return 0
+        if (-not (Test-Path $expandedPath)) {
+            continue
         }
 
-        return $size
+        try {
+            $size = (Get-ChildItem -Path $expandedPath -Recurse -File -Force -ErrorAction SilentlyContinue |
+                Measure-Object -Property Length -Sum).Sum
+
+            if ($null -ne $size) {
+                $totalSize += $size
+            }
+        }
+        catch {
+            Write-Verbose "Failed to calculate cache size for $expandedPath`: $_"
+        }
     }
-    catch {
-        Write-Verbose "Failed to calculate cache size for $expandedPath`: $_"
-        return 0
-    }
+
+    return $totalSize
 }
 
 function Remove-PackageManagerCache {
@@ -144,7 +206,7 @@ function Remove-PackageManagerCache {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory)]
-        [string]$Path,
+        [string[]]$Paths,
 
         [Parameter()]
         [switch]$UseTrash,
@@ -158,52 +220,57 @@ function Remove-PackageManagerCache {
     $failedCount = 0
     $errors = @()
 
-    $expandedPath = [Environment]::ExpandEnvironmentVariables($Path)
+    foreach ($path in $Paths) {
+        $expandedPath = [Environment]::ExpandEnvironmentVariables($path)
 
-    if (-not (Test-Path $expandedPath)) {
-        return [PSCustomObject]@{
-            RemovedCount = 0
-            RemovedSize = 0
-            FailedCount = 0
-            Errors = @()
+        if (-not (Test-Path $expandedPath)) {
+            Write-Verbose "Path does not exist: $expandedPath"
+            continue
         }
-    }
 
-    try {
-        $items = Get-ChildItem -Path $expandedPath -Force -ErrorAction Stop
+        try {
+            $items = Get-ChildItem -Path $expandedPath -Force -ErrorAction Stop
 
-        foreach ($item in $items) {
-            try {
-                $itemSize = if ($item.PSIsContainer) {
-                    $childSize = (Get-ChildItem -Path $item.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
-                        Measure-Object -Property Length -Sum).Sum
-                    if ($null -eq $childSize) { 0 } else { $childSize }
-                } else {
-                    $item.Length
-                }
-
-                if ($PSCmdlet.ShouldProcess($item.FullName, "Remove $ManagerName cache")) {
-                    if ($UseTrash) {
-                        Move-WinOpsToTrash -Path $item.FullName -Module "PackageManager.$ManagerName" -ErrorAction Stop | Out-Null
+            foreach ($item in $items) {
+                try {
+                    $itemSize = if ($item.PSIsContainer) {
+                        $childSize = (Get-ChildItem -Path $item.FullName -Recurse -File -Force -ErrorAction SilentlyContinue |
+                            Measure-Object -Property Length -Sum).Sum
+                        if ($null -eq $childSize) { 0 } else { $childSize }
                     } else {
-                        Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction Stop
+                        $item.Length
                     }
 
-                    $removedCount++
-                    $removedSize += $itemSize
-                    Write-Verbose "Removed: $($item.FullName) ($itemSize bytes)"
+                    # Safety check: verify path is safe to delete
+                    if (-not (Test-WinOpsPathSafe -Path $item.FullName)) {
+                        Write-Verbose "Skipping protected path: $($item.FullName)"
+                        $failedCount++
+                        continue
+                    }
+
+                    if ($PSCmdlet.ShouldProcess($item.FullName, "Remove $ManagerName cache")) {
+                        if ($UseTrash) {
+                            Move-WinOpsToTrash -Path $item.FullName -Module "PackageManager.$ManagerName" -ErrorAction Stop | Out-Null
+                        } else {
+                            Remove-Item -Path $item.FullName -Recurse -Force -ErrorAction Stop
+                        }
+
+                        $removedCount++
+                        $removedSize += $itemSize
+                        Write-Verbose "Removed: $($item.FullName) ($itemSize bytes)"
+                    }
+                }
+                catch {
+                    $failedCount++
+                    $errorMsg = "Failed to remove $($item.FullName): $_"
+                    $errors += $errorMsg
+                    Write-Verbose $errorMsg
                 }
             }
-            catch {
-                $failedCount++
-                $errorMsg = "Failed to remove $($item.FullName): $_"
-                $errors += $errorMsg
-                Write-Verbose $errorMsg
-            }
         }
-    }
-    catch {
-        $errors += "Failed to access $expandedPath`: $_"
+        catch {
+            $errors += "Failed to access $expandedPath`: $_"
+        }
     }
 
     return [PSCustomObject]@{
@@ -227,7 +294,7 @@ function Clear-WinOpsPackageManagerCache {
         Removes cached files from package managers including Chocolatey, Scoop, Winget, and Windows Update.
 
     .PARAMETER PackageManager
-        Package manager to clean. Valid values: Chocolatey, Scoop, Winget, WindowsUpdate, All
+        Package manager to clean. Valid values: Chocolatey, Scoop, Winget, WindowsUpdate, DISM, All
 
     .PARAMETER UseTrash
         Move files to trash instead of permanent deletion.
@@ -250,7 +317,7 @@ function Clear-WinOpsPackageManagerCache {
     [OutputType([PSCustomObject[]])]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('Chocolatey', 'Scoop', 'Winget', 'WindowsUpdate', 'All')]
+        [ValidateSet('Chocolatey', 'Scoop', 'Winget', 'WindowsUpdate', 'DISM', 'All')]
         [string]$PackageManager,
 
         [Parameter()]
@@ -284,6 +351,12 @@ function Clear-WinOpsPackageManagerCache {
             continue
         }
 
+        # Check if Windows Update is active (skip cleaning if it is)
+        if ($managerKey -eq 'WindowsUpdate' -and (Test-WindowsUpdateActive)) {
+            Write-Warning "Skipping Windows Update cache - updates are currently active"
+            continue
+        }
+
         # Check if package manager is installed
         if ($managerInfo.TestCommand) {
             if (-not (Test-PackageManagerInstalled -TestCommand $managerInfo.TestCommand)) {
@@ -295,7 +368,7 @@ function Clear-WinOpsPackageManagerCache {
         Write-Verbose "Processing: $($managerInfo.Name)"
 
         # Calculate cache size
-        $cacheSize = Get-PackageManagerCacheSize -Path $managerInfo.CachePath
+        $cacheSize = Get-PackageManagerCacheSize -Paths $managerInfo.CachePaths
 
         if ($cacheSize -eq 0) {
             Write-Verbose "No cache found for $($managerInfo.Name)"
@@ -326,7 +399,7 @@ function Clear-WinOpsPackageManagerCache {
 
         # Remove cache
         $removeResult = Remove-PackageManagerCache `
-            -Path $managerInfo.CachePath `
+            -Paths $managerInfo.CachePaths `
             -UseTrash:$UseTrash `
             -ManagerName $managerInfo.Name
 
@@ -510,7 +583,7 @@ function Get-WinOpsPackageManagerInfo {
         Retrieves cache size information for package managers.
 
     .PARAMETER PackageManager
-        Package manager to query. Valid values: Chocolatey, Scoop, Winget, WindowsUpdate, All
+        Package manager to query. Valid values: Chocolatey, Scoop, Winget, WindowsUpdate, DISM, All
 
     .EXAMPLE
         Get-WinOpsPackageManagerInfo -PackageManager All
@@ -520,7 +593,7 @@ function Get-WinOpsPackageManagerInfo {
     [OutputType([PSCustomObject[]])]
     param(
         [Parameter()]
-        [ValidateSet('Chocolatey', 'Scoop', 'Winget', 'WindowsUpdate', 'All')]
+        [ValidateSet('Chocolatey', 'Scoop', 'Winget', 'WindowsUpdate', 'DISM', 'All')]
         [string]$PackageManager = 'All'
     )
 
@@ -548,7 +621,7 @@ function Get-WinOpsPackageManagerInfo {
 
         Write-Verbose "Querying: $($managerInfo.Name)"
 
-        $cacheSize = Get-PackageManagerCacheSize -Path $managerInfo.CachePath
+        $cacheSize = Get-PackageManagerCacheSize -Paths $managerInfo.CachePaths
 
         $results += [PSCustomObject]@{
             PackageManager = $managerInfo.Name
@@ -556,7 +629,7 @@ function Get-WinOpsPackageManagerInfo {
             CacheSize = $cacheSize
             CacheSizeMB = [math]::Round($cacheSize / 1MB, 2)
             CacheSizeGB = [math]::Round($cacheSize / 1GB, 2)
-            CachePath = $managerInfo.CachePath
+            CachePaths = $managerInfo.CachePaths
             Installed = $isInstalled
             RequiresElevation = $managerInfo.RequiresElevation
         }
