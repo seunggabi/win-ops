@@ -1,0 +1,24 @@
+{
+  "critical_processes": [
+    "System",
+    "csrss",
+    "lsass",
+    "smss",
+    "services",
+    "winlogon",
+    "wininit"
+  ],
+  "system_processes": [
+    "svchost",
+    "dwm",
+    "explorer",
+    "taskhostw",
+    "RuntimeBroker"
+  ],
+  "security_processes": [
+    "MsMpEng",
+    "SgrmBroker",
+    "SecurityHealthService",
+    "TrustedInstaller"
+  ]
+}

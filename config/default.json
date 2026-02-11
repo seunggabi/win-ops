@@ -1,0 +1,14 @@
+{
+  "trash": {
+    "path": "%LOCALAPPDATA%\\win-ops\\trash",
+    "retention_hours": 72
+  },
+  "cleanup": {
+    "dry_run": false,
+    "parallel": true,
+    "max_threads": 4
+  },
+  "cache_age_days": 7,
+  "tmp_age_days": 3,
+  "log_age_days": 14
+}

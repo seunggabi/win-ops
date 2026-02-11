@@ -1,0 +1,88 @@
+# PowerShell specific
+*.ps1xml
+*.log
+*.log.*
+*.stackdump
+
+# Build artifacts
+bin/Debug/
+bin/Release/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# Package management
+packages/
+.nuget/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# IDE and editor
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*~
+.DS_Store
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.bak
+*.orig
+
+# Configuration files with secrets
+config/local.json
+config/*.local.json
+*.secret.json
+.env
+.env.local
+
+# Output and logs
+output/
+logs/
+*.out
+
+# Trash directory (created by win-ops)
+.trash/
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory
+coverage/
+*.lcov
+
+# Windows specific
+Thumbs.DB
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Mac specific
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux specific
+.directory
+
+# Project specific
+scheduler/tasks/*.running
+scheduler/tasks/*.lock
+state/*.state
