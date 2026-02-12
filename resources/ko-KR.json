@@ -246,5 +246,22 @@
   "Registry_Failed": "제거 실패: {0}",
   "Registry_BackupSaved": "백업 저장 위치: {0}",
   "Registry_Complete": "레지스트리 정리 완료: {0}개 항목 정리됨",
-  "Registry_DryRun": "고아 항목 {0}개 발견 (시뮬레이션)"
+  "Registry_DryRun": "고아 항목 {0}개 발견 (시뮬레이션)",
+  "History_Starting": "기록 및 개인정보 데이터 정리 중...",
+  "History_RunDialog": "실행 대화 상자 기록: {0}개 항목",
+  "History_ExplorerPaths": "탐색기 주소창 기록: {0}개 항목",
+  "History_ExplorerSearch": "탐색기 검색 기록: {0}개 항목",
+  "History_JumpLists": "점프 목록: {0}개 항목",
+  "History_RecentDocs": "최근 문서: {0}개 바로가기",
+  "History_ActivityTimeline": "활동 타임라인: {0}개 항목",
+  "History_Clipboard": "클립보드 기록 삭제됨",
+  "History_ShellHistory": "셸 명령 기록: {0}개 명령",
+  "History_WindowsSearch": "Windows 검색 기록: {0}개 항목",
+  "History_Complete": "기록 정리 완료 ({0}개 항목)",
+  "OrphanApp_Starting": "고아 애플리케이션 데이터 검색 중...",
+  "OrphanApp_Found": "고아 항목 {0}개 발견 ({1} GB)",
+  "OrphanApp_Complete": "고아 앱 데이터 정리 완료: {0}개 항목 제거됨",
+  "Status_LastCleanup": "마지막 정리",
+  "Status_CleanupTime": "시간: {0}",
+  "Status_CleanupDryRun": "모드: 시뮬레이션"
 }

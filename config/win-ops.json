@@ -123,6 +123,21 @@
       }
     },
     {
+      "name": "HistoryCleanup",
+      "enabled": true,
+      "settings": {
+        "clearRunDialog": true,
+        "clearExplorerPaths": true,
+        "clearExplorerSearch": true,
+        "clearJumpLists": true,
+        "clearRecentDocs": true,
+        "clearActivityTimeline": true,
+        "clearClipboard": true,
+        "clearShellHistory": true,
+        "clearWindowsSearch": true
+      }
+    },
+    {
       "name": "RegistryCleanup",
       "enabled": true,
       "settings": {

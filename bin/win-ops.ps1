@@ -346,14 +346,20 @@ function Start-WinOpsCleanup {
 
             # Module name to function name mapping
             $moduleMap = @{
-                'CacheCleanup'    = 'Clear-WinOpsCache'
-                'TmpCleanup'      = 'Clear-WinOpsTempFiles'
-                'LogCleanup'      = 'Clear-WinOpsLogFiles'
-                'MemoryCleanup'   = 'Clear-WinOpsMemory'
-                'RegistryCleanup' = 'Clear-WinOpsRegistry'
+                'CacheCleanup'      = 'Clear-WinOpsCache'
+                'TmpCleanup'        = 'Clear-WinOpsTempFiles'
+                'LogCleanup'        = 'Clear-WinOpsLogFiles'
+                'MemoryCleanup'     = 'Clear-WinOpsMemory'
+                'RegistryCleanup'   = 'Clear-WinOpsRegistry'
+                'HistoryCleanup'    = 'Clear-WinOpsHistory'
+                'OrphanAppCleanup'  = 'Clear-WinOpsOrphanedAppData'
             }
 
-            $modulesToRun = @('CacheCleanup', 'TmpCleanup', 'LogCleanup', 'MemoryCleanup', 'RegistryCleanup')
+            $modulesToRun = @(
+                'CacheCleanup', 'TmpCleanup', 'LogCleanup',
+                'MemoryCleanup', 'RegistryCleanup', 'HistoryCleanup',
+                'OrphanAppCleanup'
+            )
 
             foreach ($moduleName in $modulesToRun) {
                 try {
@@ -373,10 +379,12 @@ function Start-WinOpsCleanup {
 
                         $params = @{
                             DryRun = $DryRun
+                            Force  = $true
                         }
 
                         $result = & $functionName @params
-                        $results += $result
+                        # Store result with module name for summary
+                        $results += @{ Name = $moduleName; Result = $result }
                     }
                 }
                 catch {
@@ -384,7 +392,52 @@ function Start-WinOpsCleanup {
                 }
             }
 
-            Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Complete')" -ForegroundColor Green
+            # Display summary
+            Write-Host "`n=== Cleanup Summary ===" -ForegroundColor Cyan
+            foreach ($entry in $results) {
+                $r = $entry.Result
+                if ($null -eq $r) { continue }
+                $props = $r.PSObject.Properties
+                $modName = $entry.Name
+                $items = if ($props['ItemsProcessed'] -and $r.ItemsProcessed) { $r.ItemsProcessed } elseif ($props['ItemsRemoved'] -and $r.ItemsRemoved) { $r.ItemsRemoved } elseif ($props['TotalItemsRemoved'] -and $r.TotalItemsRemoved) { $r.TotalItemsRemoved } else { 0 }
+                $freed = ''
+                if ($props['MemoryFreedMB'] -and $r.MemoryFreedMB -gt 0) {
+                    $freed = " ($($r.MemoryFreedMB) MB freed)"
+                }
+                elseif ($props['SpaceReclaimedMB'] -and $r.SpaceReclaimedMB -gt 0) {
+                    $freed = " ($([math]::Round($r.SpaceReclaimedMB, 2)) MB)"
+                }
+                elseif ($props['TotalSizeRemovedMB'] -and $r.TotalSizeRemovedMB -gt 0) {
+                    $freed = " ($([math]::Round($r.TotalSizeRemovedMB, 2)) MB)"
+                }
+                if ($items -gt 0) {
+                    Write-Host "  $modName : $items items$freed" -ForegroundColor White
+                }
+            }
+
+            # Save last cleanup results
+            $lastCleanup = @{
+                Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+                DryRun = [bool]$DryRun
+                Results = @()
+            }
+            foreach ($entry in $results) {
+                $r = $entry.Result
+                if ($null -eq $r) { continue }
+                $props = $r.PSObject.Properties
+                $items = if ($props['ItemsProcessed'] -and $r.ItemsProcessed) { $r.ItemsProcessed } elseif ($props['ItemsRemoved'] -and $r.ItemsRemoved) { $r.ItemsRemoved } elseif ($props['TotalItemsRemoved'] -and $r.TotalItemsRemoved) { $r.TotalItemsRemoved } else { 0 }
+                $lastCleanup.Results += @{
+                    Module = $entry.Name
+                    Items = $items
+                    MemoryFreedMB = if ($props['MemoryFreedMB']) { $r.MemoryFreedMB } else { 0 }
+                    SpaceReclaimedMB = if ($props['SpaceReclaimedMB']) { $r.SpaceReclaimedMB } elseif ($props['TotalSizeRemovedMB']) { $r.TotalSizeRemovedMB } else { 0 }
+                }
+            }
+            $lastCleanupPath = Join-Path $env:LOCALAPPDATA 'win-ops\last-cleanup.json'
+            $lastCleanup | ConvertTo-Json -Depth 3 | Set-Content -Path $lastCleanupPath -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+
+            Write-Host ""
+            Write-Host "$(Get-WinOpsMessage -Key 'Cleanup_Complete')" -ForegroundColor Green
             Write-Host "$(Get-WinOpsMessage -Key 'Cleanup_SeeResults')`n" -ForegroundColor Gray
         }
         finally {
@@ -481,6 +534,39 @@ function Get-WinOpsStatus {
             }
         } else {
             Write-Host (Get-WinOpsMessage -Key 'Status_TrashEmpty') -ForegroundColor Green
+        }
+
+        # Last cleanup results
+        $lastCleanupPath = Join-Path $env:LOCALAPPDATA 'win-ops\last-cleanup.json'
+        if (Test-Path $lastCleanupPath -ErrorAction SilentlyContinue) {
+            Write-Host ""
+            Write-Host "=== Last Cleanup ===" -ForegroundColor Cyan
+            Write-Host ""
+
+            try {
+                $jsonContent = Get-Content -Path $lastCleanupPath -Raw -Encoding UTF8 -ErrorAction Stop
+                $lastObj = ConvertFrom-Json -InputObject $jsonContent -ErrorAction Stop
+                Write-Host "  Time: $($lastObj.Timestamp)" -ForegroundColor White
+                if ($lastObj.DryRun) {
+                    Write-Host "  Mode: DRY RUN" -ForegroundColor Yellow
+                }
+
+                foreach ($r in $lastObj.Results) {
+                    $items = $r.Items
+                    if ($items -le 0) { continue }
+                    $extra = ''
+                    if ($r.MemoryFreedMB -gt 0) {
+                        $extra = " (Memory: $($r.MemoryFreedMB) MB freed)"
+                    }
+                    elseif ($r.SpaceReclaimedMB -gt 0) {
+                        $extra = " ($([math]::Round($r.SpaceReclaimedMB, 2)) MB)"
+                    }
+                    Write-Host "  $($r.Module): $items items$extra" -ForegroundColor Gray
+                }
+            }
+            catch {
+                Write-Verbose "Failed to read last cleanup results: $_"
+            }
         }
 
         Write-Host ""
