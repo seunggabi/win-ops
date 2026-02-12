@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"which powershell pwsh\",\"description\":\"Find available PowerShell executable\"}",
-  "error": "Exit code 1\npowershell not found\npwsh not found",
-  "timestamp": "2026-02-12T05:29:11.909Z",
-  "retry_count": 3
-}

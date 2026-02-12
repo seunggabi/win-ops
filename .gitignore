@@ -86,3 +86,6 @@ Icon
 scheduler/tasks/*.running
 scheduler/tasks/*.lock
 state/*.state
+
+.claude
+.omc
