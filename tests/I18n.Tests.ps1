@@ -123,11 +123,11 @@ Describe 'I18n Module' {
     Context 'Resource File Coverage' {
         It 'Should have same keys in en-US and ko-KR' {
             $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-            $enFile = Join-Path $projectRoot 'resources\en-US.psd1'
-            $koFile = Join-Path $projectRoot 'resources\ko-KR.psd1'
+            $enFile = Join-Path $projectRoot 'resources\en-US.json'
+            $koFile = Join-Path $projectRoot 'resources\ko-KR.json'
 
-            $enData = Import-PowerShellDataFile -Path $enFile
-            $koData = Import-PowerShellDataFile -Path $koFile
+            $enData = Get-Content -Path $enFile -Raw | ConvertFrom-Json -AsHashtable
+            $koData = Get-Content -Path $koFile -Raw | ConvertFrom-Json -AsHashtable
 
             $enKeys = $enData.Keys | Sort-Object
             $koKeys = $koData.Keys | Sort-Object
