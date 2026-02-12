@@ -17,9 +17,6 @@
 .PARAMETER Force
     Force execution without confirmation prompts
 
-.PARAMETER Verbose
-    Enable verbose output
-
 .EXAMPLE
     win-ops.ps1 help
     Display help information
@@ -54,7 +51,7 @@ param(
 
     [Parameter()]
     [Alias('v')]
-    [switch]$Verbose
+    [switch]$VerboseOutput
 )
 
 #Requires -Version 7.0
@@ -67,7 +64,7 @@ $script:ModuleVersion = '1.0.0'
 $script:ModuleName = 'win-ops'
 
 # Set verbose preference if flag is provided
-if ($Verbose) {
+if ($VerboseOutput) {
     $VerbosePreference = 'Continue'
 }
 
@@ -272,14 +269,14 @@ function Start-WinOpsCleanup {
         foreach ($module in $coreModules) {
             $modulePath = Join-Path $script:ScriptRoot $module
             if (Test-Path $modulePath) {
-                Import-Module $modulePath -Force
+                Import-Module $modulePath -Force -Global
             }
         }
 
         # Import Analyze module
         $analyzeModule = Join-Path $script:ScriptRoot 'lib\modules\Analyze.psm1'
         if (Test-Path $analyzeModule) {
-            Import-Module $analyzeModule -Force
+            Import-Module $analyzeModule -Force -Global
         }
 
         # Initialize logger
@@ -802,7 +799,7 @@ function Invoke-WinOps {
 
 # Main execution
 try {
-    Invoke-WinOps -Command $Command -DryRun:$DryRun -Force:$Force -Verbose:$Verbose
+    Invoke-WinOps -Command $Command -DryRun:$DryRun -Force:$Force
     exit 0
 }
 catch {

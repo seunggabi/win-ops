@@ -21,14 +21,18 @@
 using namespace System.IO
 using namespace System.Collections.Generic
 
-# Import required core modules
+# Import required core modules (skip if already loaded to avoid scope conflicts)
 $coreModulePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\core'
-Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force
-Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force
+if (-not (Get-Command Get-WinOpsConfig -ErrorAction SilentlyContinue)) {
+    Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force
+}
+if (-not (Get-Command Initialize-WinOpsLogger -ErrorAction SilentlyContinue)) {
+    Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force
+}
 
 # Import format module for visual output
 $utilsModulePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\utils'
-if (Test-Path (Join-Path $utilsModulePath 'Format.psm1')) {
+if ((Test-Path (Join-Path $utilsModulePath 'Format.psm1')) -and -not (Get-Command Format-WinOpsSize -ErrorAction SilentlyContinue)) {
     Import-Module (Join-Path $utilsModulePath 'Format.psm1') -Force -ErrorAction SilentlyContinue
 }
 
