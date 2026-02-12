@@ -51,7 +51,11 @@ param(
 
     [Parameter()]
     [Alias('v')]
-    [switch]$VerboseOutput
+    [switch]$VerboseOutput,
+
+    [Parameter()]
+    [Alias('p')]
+    [switch]$PurgeTrash
 )
 
 #Requires -Version 5.1
@@ -254,7 +258,8 @@ function Start-WinOpsCleanup {
     [CmdletBinding()]
     param(
         [switch]$DryRun,
-        [switch]$Force
+        [switch]$Force,
+        [switch]$PurgeTrash
     )
 
     try {
@@ -436,9 +441,24 @@ function Start-WinOpsCleanup {
             $lastCleanupPath = Join-Path $env:LOCALAPPDATA 'win-ops\last-cleanup.json'
             $lastCleanup | ConvertTo-Json -Depth 3 | Set-Content -Path $lastCleanupPath -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 
+            # Purge trash if requested
+            if ($PurgeTrash -and -not $DryRun) {
+                Write-Host ""
+                Write-Host "=== Trash Purge ===" -ForegroundColor Cyan
+                $trashResult = Clear-WinOpsTrash -Force
+                if ($trashResult -and $trashResult.RemovedCount -gt 0) {
+                    Write-Host "  Purged $($trashResult.RemovedCount) items ($($trashResult.ReclaimedMB) MB)" -ForegroundColor White
+                } else {
+                    Write-Host "  Trash is empty" -ForegroundColor Gray
+                }
+            }
+
             Write-Host ""
             Write-Host "$(Get-WinOpsMessage -Key 'Cleanup_Complete')" -ForegroundColor Green
-            Write-Host "$(Get-WinOpsMessage -Key 'Cleanup_SeeResults')`n" -ForegroundColor Gray
+            Write-Host ""
+
+            # Show status after cleanup
+            Get-WinOpsStatus
         }
         finally {
             Unlock-WinOps
@@ -854,7 +874,8 @@ function Invoke-WinOps {
     param(
         [string]$Command,
         [switch]$DryRun,
-        [switch]$Force
+        [switch]$Force,
+        [switch]$PurgeTrash
     )
 
     switch ($Command.ToLower()) {
@@ -868,7 +889,7 @@ function Invoke-WinOps {
             Start-WinOpsAnalysis -DryRun:$DryRun
         }
         'run' {
-            Start-WinOpsCleanup -DryRun:$DryRun -Force:$Force
+            Start-WinOpsCleanup -DryRun:$DryRun -Force:$Force -PurgeTrash:$PurgeTrash
         }
         'status' {
             Get-WinOpsStatus
@@ -894,7 +915,7 @@ function Invoke-WinOps {
 
 # Main execution
 try {
-    Invoke-WinOps -Command $Command -DryRun:$DryRun -Force:$Force
+    Invoke-WinOps -Command $Command -DryRun:$DryRun -Force:$Force -PurgeTrash:$PurgeTrash
     exit 0
 }
 catch {

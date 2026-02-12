@@ -201,7 +201,7 @@
   },
 
   "schedule": {
-    "enabled": false,
+    "enabled": true,
     "interval": "Hourly",
     "startTime": "00:00",
     "runOnBattery": false
