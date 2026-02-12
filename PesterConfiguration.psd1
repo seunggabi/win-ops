@@ -1,9 +1,9 @@
 @{
     Run = @{
         Path = './tests'
-        Exit = $false
-        PassThru = $true
-        SkipRun = $false
+        Exit = false
+        PassThru = true
+        SkipRun = false
     }
 
     Filter = @{
@@ -14,7 +14,7 @@
     }
 
     CodeCoverage = @{
-        Enabled = $true
+        Enabled = true
         Path = @(
             './lib/core/*.psm1',
             './lib/modules/*.psm1',
@@ -25,11 +25,11 @@
         OutputPath = './tests/coverage.xml'
         OutputEncoding = 'UTF8'
         CoveragePercentTarget = 80
-        UseBreakpoints = $false
+        UseBreakpoints = false
     }
 
     TestResult = @{
-        Enabled = $true
+        Enabled = true
         OutputFormat = 'NUnitXml'
         OutputPath = './tests/test-results.xml'
         OutputEncoding = 'UTF8'
@@ -41,11 +41,11 @@
     }
 
     Debug = @{
-        ShowFullErrors = $false
-        WriteDebugMessages = $false
+        ShowFullErrors = false
+        WriteDebugMessages = false
         WriteDebugMessagesFrom = @()
-        ShowNavigationMarkers = $false
-        ReturnRawResultObject = $false
+        ShowNavigationMarkers = false
+        ReturnRawResultObject = false
     }
 
     Output = @{
@@ -56,11 +56,11 @@
     }
 
     TestDrive = @{
-        Enabled = $true
+        Enabled = true
     }
 
     TestRegistry = @{
-        Enabled = $false
+        Enabled = false
     }
 
     # Parallel execution settings
