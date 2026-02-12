@@ -1,6 +1,3 @@
-# ko-KR.psd1 - Korean (Korea) Language Resources
-# Win-Ops 국제화 메시지
-
 @{
     # CLI - 메인 도움말
     CLI_Help_Title = "Windows 운영 관리자"

@@ -1,6 +1,3 @@
-# en-US.psd1 - English (United States) Language Resources
-# Win-Ops internationalization messages
-
 @{
     # CLI - Main Help
     CLI_Help_Title = "Windows Operations Manager"
