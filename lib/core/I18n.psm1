@@ -124,9 +124,10 @@ function Initialize-WinOpsI18n {
         $script:I18nConfig.ResourcesPath = $ResourcesPath
     }
     else {
-        # Default: resources directory relative to module root
-        $moduleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-        $script:I18nConfig.ResourcesPath = Join-Path $moduleRoot 'resources'
+        # Default: resources directory relative to project root
+        # $PSScriptRoot is lib/core, so go up twice to get project root
+        $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+        $script:I18nConfig.ResourcesPath = Join-Path $projectRoot 'resources'
     }
 
     # Ensure resources directory exists

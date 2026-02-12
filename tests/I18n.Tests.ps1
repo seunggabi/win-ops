@@ -122,7 +122,7 @@ Describe 'I18n Module' {
 
     Context 'Resource File Coverage' {
         It 'Should have same keys in en-US and ko-KR' {
-            $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+            $projectRoot = Split-Path $PSScriptRoot -Parent
             $enFile = Join-Path $projectRoot 'resources\en-US.json'
             $koFile = Join-Path $projectRoot 'resources\ko-KR.json'
 
