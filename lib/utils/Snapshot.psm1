@@ -9,6 +9,28 @@ $script:CimSession = $null
 
 #region Private Functions
 
+function ConvertTo-HashtableRecursive {
+    <#
+    .SYNOPSIS
+        Recursively converts PSCustomObject to hashtable (PS 5.1 compatible).
+    #>
+    param($Object)
+
+    if ($null -eq $Object) { return $null }
+    if ($Object -is [System.Collections.IDictionary]) { return $Object }
+    if ($Object -is [PSCustomObject]) {
+        $hash = @{}
+        $Object.PSObject.Properties | ForEach-Object {
+            $hash[$_.Name] = ConvertTo-HashtableRecursive $_.Value
+        }
+        return $hash
+    }
+    if ($Object -is [System.Collections.IEnumerable] -and $Object -isnot [string]) {
+        return @($Object | ForEach-Object { ConvertTo-HashtableRecursive $_ })
+    }
+    return $Object
+}
+
 function Initialize-CimSession {
     <#
     .SYNOPSIS
@@ -577,7 +599,7 @@ function Import-WinOpsSnapshot {
         }
 
         $json = Get-Content -Path $Path -Raw -Encoding UTF8
-        $snapshot = $json | ConvertFrom-Json -AsHashtable
+        $snapshot = ConvertTo-HashtableRecursive ($json | ConvertFrom-Json)
 
         Write-Verbose "Snapshot imported from: $Path"
         return $snapshot

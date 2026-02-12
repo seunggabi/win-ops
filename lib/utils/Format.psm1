@@ -301,17 +301,17 @@ function Write-WinOpsSummary {
 
     if ($CleanedCount -gt 0) {
         $formattedSize = Format-WinOpsBytes -Bytes $CleanedBytes
-        Write-WinOpsColor -Text "✓" -Color Green -NoNewline
+        Write-WinOpsColor -Text "OK" -Color Green -NoNewline
         Write-Host " Files cleaned: $CleanedCount items ($formattedSize)"
     }
 
     if ($KilledProcs -gt 0) {
-        Write-WinOpsColor -Text "✓" -Color Green -NoNewline
+        Write-WinOpsColor -Text "OK" -Color Green -NoNewline
         Write-Host " Processes terminated: $KilledProcs items"
     }
 
     if ($CleanedCount -eq 0 -and $KilledProcs -eq 0) {
-        Write-WinOpsColor -Text "ℹ" -Color Blue -NoNewline
+        Write-WinOpsColor -Text "[INFO]" -Color Blue -NoNewline
         Write-Host " No items to clean"
     }
 
@@ -383,16 +383,16 @@ function Write-WinOpsReport {
 
     # Disk usage row
     $diskUsageIndicator = if ($diskUsageDelta -lt 0) {
-        Write-WinOpsColor -Text "↓" -Color Green -NoNewline
-        "↓"
+        Write-WinOpsColor -Text "v" -Color Green -NoNewline
+        "v"
     } elseif ($diskUsageDelta -eq 0) {
         "="
     } else {
-        Write-WinOpsColor -Text "↑" -Color Yellow -NoNewline
-        "↑"
+        Write-WinOpsColor -Text "^" -Color Yellow -NoNewline
+        "^"
     }
 
-    Write-Host ("{0,-12} : {1,6}   →  {2,6}   ({3} {4}%)" -f `
+    Write-Host ("{0,-12} : {1,6}   ->  {2,6}   ({3} {4}%)" -f `
         "Disk", `
         "$($BeforeSnapshot.DiskUsagePct)%", `
         "$($AfterSnapshot.DiskUsagePct)%", `
@@ -401,16 +401,16 @@ function Write-WinOpsReport {
 
     # Disk free row
     $diskFreeIndicator = if ($diskFreeDelta -gt 0) {
-        Write-WinOpsColor -Text "↑" -Color Green -NoNewline
-        "↑"
+        Write-WinOpsColor -Text "^" -Color Green -NoNewline
+        "^"
     } elseif ($diskFreeDelta -eq 0) {
         "="
     } else {
-        Write-WinOpsColor -Text "↓" -Color Yellow -NoNewline
-        "↓"
+        Write-WinOpsColor -Text "v" -Color Yellow -NoNewline
+        "v"
     }
 
-    Write-Host ("{0,-12} : {1,9} →  {2,9} ({3} {4})" -f `
+    Write-Host ("{0,-12} : {1,9} ->  {2,9} ({3} {4})" -f `
         "Disk Free", `
         $beforeDiskFree, `
         $afterDiskFree, `
@@ -419,16 +419,16 @@ function Write-WinOpsReport {
 
     # Memory used row
     $memUsedIndicator = if ($memUsedDelta -lt 0) {
-        Write-WinOpsColor -Text "↓" -Color Green -NoNewline
-        "↓"
+        Write-WinOpsColor -Text "v" -Color Green -NoNewline
+        "v"
     } elseif ($memUsedDelta -eq 0) {
         "="
     } else {
-        Write-WinOpsColor -Text "↑" -Color Yellow -NoNewline
-        "↑"
+        Write-WinOpsColor -Text "^" -Color Yellow -NoNewline
+        "^"
     }
 
-    Write-Host ("{0,-12} : {1,9} →  {2,9} ({3} {4})" -f `
+    Write-Host ("{0,-12} : {1,9} ->  {2,9} ({3} {4})" -f `
         "Memory", `
         $beforeMemUsed, `
         $afterMemUsed, `
@@ -441,17 +441,17 @@ function Write-WinOpsReport {
     $formattedSize = Format-WinOpsBytes -Bytes $CleanedBytes
 
     if ($CleanedCount -gt 0) {
-        Write-WinOpsColor -Text "✓" -Color Green -NoNewline
+        Write-WinOpsColor -Text "OK" -Color Green -NoNewline
         Write-Host " Files cleaned: $CleanedCount items ($formattedSize)"
     }
 
     if ($KilledProcs -gt 0) {
-        Write-WinOpsColor -Text "✓" -Color Green -NoNewline
+        Write-WinOpsColor -Text "OK" -Color Green -NoNewline
         Write-Host " Processes terminated: $KilledProcs items"
     }
 
     if ($CleanedCount -eq 0 -and $KilledProcs -eq 0) {
-        Write-WinOpsColor -Text "ℹ" -Color Blue -NoNewline
+        Write-WinOpsColor -Text "[INFO]" -Color Blue -NoNewline
         Write-Host " No items to clean"
     }
 

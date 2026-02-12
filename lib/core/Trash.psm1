@@ -12,6 +12,28 @@ $script:IndexLock = $null
 
 #region Private Functions
 
+function ConvertTo-HashtableRecursive {
+    <#
+    .SYNOPSIS
+        Recursively converts PSCustomObject to hashtable (PS 5.1 compatible).
+    #>
+    param($Object)
+
+    if ($null -eq $Object) { return $null }
+    if ($Object -is [System.Collections.IDictionary]) { return $Object }
+    if ($Object -is [PSCustomObject]) {
+        $hash = @{}
+        $Object.PSObject.Properties | ForEach-Object {
+            $hash[$_.Name] = ConvertTo-HashtableRecursive $_.Value
+        }
+        return $hash
+    }
+    if ($Object -is [System.Collections.IEnumerable] -and $Object -isnot [string]) {
+        return @($Object | ForEach-Object { ConvertTo-HashtableRecursive $_ })
+    }
+    return $Object
+}
+
 function Initialize-TrashDirectory {
     [CmdletBinding()]
     param()
@@ -100,7 +122,7 @@ function Read-TrashIndex {
 
     try {
         $content = Get-Content -Path $script:IndexFile -Raw -Encoding UTF8 -ErrorAction Stop
-        $index = $content | ConvertFrom-Json -AsHashtable
+        $index = ConvertTo-HashtableRecursive ($content | ConvertFrom-Json)
 
         if (-not $index.ContainsKey('items')) {
             $index['items'] = @{}

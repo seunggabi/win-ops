@@ -23,10 +23,10 @@ using namespace System.Diagnostics.Eventing.Reader
 
 # Import required core modules (skip if already loaded to avoid scope conflicts)
 $coreModulePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\core'
-if (-not (Get-Module -Name Config)) { Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force }
-if (-not (Get-Module -Name Logger)) { Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force }
-if (-not (Get-Module -Name Safety)) { Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force }
-if (-not (Get-Module -Name Trash)) { Import-Module (Join-Path $coreModulePath 'Trash.psm1') -Force }
+if (-not (Get-Module -Name Config)) { Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force -Global }
+if (-not (Get-Module -Name Logger)) { Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force -Global }
+if (-not (Get-Module -Name Safety)) { Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force -Global }
+if (-not (Get-Module -Name Trash)) { Import-Module (Join-Path $coreModulePath 'Trash.psm1') -Force -Global }
 
 #region Log Locations
 
@@ -401,9 +401,9 @@ function Clear-WinOpsLogFiles {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     [OutputType([PSCustomObject[]])]
     param(
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateSet('WindowsLogs', 'IISLogs', 'ApplicationLogs', 'SetupLogs', 'VSCodeLogs', 'PowerShellLogs', 'All')]
-        [string]$Location,
+        [string]$Location = 'All',
 
         [Parameter()]
         [ValidateRange(0, 365)]

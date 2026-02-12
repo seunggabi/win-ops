@@ -24,22 +24,22 @@ using namespace System.Collections.Generic
 # Import required core modules (skip if already loaded to avoid scope conflicts)
 $coreModulePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\core'
 if (-not (Get-Command Get-WinOpsConfig -ErrorAction SilentlyContinue)) {
-    Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force
+    Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force -Global
 }
 if (-not (Get-Command Initialize-WinOpsLogger -ErrorAction SilentlyContinue)) {
-    Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force
+    Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force -Global
 }
 
 # Import format module for visual output
 $utilsModulePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\utils'
 if ((Test-Path (Join-Path $utilsModulePath 'Format.psm1')) -and -not (Get-Command Format-WinOpsSize -ErrorAction SilentlyContinue)) {
-    Import-Module (Join-Path $utilsModulePath 'Format.psm1') -Force -ErrorAction SilentlyContinue
+    Import-Module (Join-Path $utilsModulePath 'Format.psm1') -Force -Global -ErrorAction SilentlyContinue
 }
 
 # Import I18n module
 $i18nModulePath = Join-Path $coreModulePath 'I18n.psm1'
 if ((Test-Path $i18nModulePath) -and -not (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue)) {
-    Import-Module $i18nModulePath -Force -ErrorAction SilentlyContinue
+    Import-Module $i18nModulePath -Force -Global -ErrorAction SilentlyContinue
     Initialize-WinOpsI18n -ErrorAction SilentlyContinue
 }
 
@@ -134,7 +134,7 @@ function Import-CleanupModule {
     }
 
     try {
-        Import-Module $modulePath -Force -ErrorAction Stop
+        Import-Module $modulePath -Force -Global -ErrorAction Stop
         return $true
     }
     catch {
@@ -314,7 +314,7 @@ function Format-SizeBar {
     $percentage = $Value / $MaxValue
     $filledWidth = [math]::Floor($percentage * $Width)
 
-    $bar = "█" * $filledWidth + "░" * ($Width - $filledWidth)
+    $bar = "#" * $filledWidth + " " * ($Width - $filledWidth)
 
     return $bar
 }
@@ -501,9 +501,9 @@ function Get-WinOpsAnalysis {
             "Win-Ops Cleanup Analysis Report"
         }
         Write-Host ""
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                    $titleMsg                       ║" -ForegroundColor Cyan
-        Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                    $titleMsg                       |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
         Write-Host ""
 
         $timeLabel = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
@@ -527,7 +527,7 @@ function Get-WinOpsAnalysis {
         } else {
             "Category Summary"
         }
-        Write-Host "═══ $categorySummaryLabel ═══" -ForegroundColor Cyan
+        Write-Host "=== $categorySummaryLabel ===" -ForegroundColor Cyan
         Write-Host ""
 
         $maxSize = ($categorySummary | Measure-Object -Property TotalSizeGB -Maximum).Maximum
@@ -547,7 +547,7 @@ function Get-WinOpsAnalysis {
         } else {
             "Summary"
         }
-        Write-Host "═══ $summaryLabel ═══" -ForegroundColor Cyan
+        Write-Host "=== $summaryLabel ===" -ForegroundColor Cyan
 
         $reclaimableMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
             Get-WinOpsMessage -Key 'Analyze_Total_Reclaimable' -Args ("{0:N2}" -f $totalSizeGB), ("{0:N2}" -f $totalSizeMB)
@@ -577,7 +577,7 @@ function Get-WinOpsAnalysis {
         } else {
             "Top $TopN Largest Items"
         }
-        Write-Host "═══ $topItemsLabel ═══" -ForegroundColor Cyan
+        Write-Host "=== $topItemsLabel ===" -ForegroundColor Cyan
         Write-Host ""
 
         $rank = 1
@@ -686,7 +686,7 @@ function Compare-WinOpsAnalysis {
     } else {
         "Cleanup Comparison"
     }
-    Write-Host "═══ $titleMsg ═══" -ForegroundColor Cyan
+    Write-Host "=== $titleMsg ===" -ForegroundColor Cyan
     Write-Host ""
 
     $beforeMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {

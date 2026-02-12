@@ -54,7 +54,7 @@ param(
     [switch]$VerboseOutput
 )
 
-#Requires -Version 7.0
+#Requires -Version 5.1
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -303,7 +303,7 @@ function Start-WinOpsCleanup {
 
         try {
             Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Title')" -ForegroundColor Cyan
-            Write-Host "═══════════════`n" -ForegroundColor Cyan
+            Write-Host "===============`n" -ForegroundColor Cyan
 
             if ($DryRun) {
                 Write-Host "$(Get-WinOpsMessage -Key 'Cleanup_DryRunMode')`n" -ForegroundColor Yellow
@@ -407,13 +407,13 @@ function Get-WinOpsStatus {
         if (Test-Path $lockModule) { Import-Module $lockModule -Force }
 
         Write-Host ""
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                          $(Get-WinOpsMessage -Key 'Status_Title')                                  ║" -ForegroundColor Cyan
-        Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                          $(Get-WinOpsMessage -Key 'Status_Title')                                  |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
         Write-Host ""
 
         # System status
-        Write-Host "═══ $(Get-WinOpsMessage -Key 'Status_System') ═══" -ForegroundColor Cyan
+        Write-Host "=== $(Get-WinOpsMessage -Key 'Status_System') ===" -ForegroundColor Cyan
         Write-Host ""
 
         # Lock status
@@ -427,7 +427,7 @@ function Get-WinOpsStatus {
 
         # Disk usage
         Write-Host ""
-        Write-Host "═══ $(Get-WinOpsMessage -Key 'Status_DiskUsage') ═══" -ForegroundColor Cyan
+        Write-Host "=== $(Get-WinOpsMessage -Key 'Status_DiskUsage') ===" -ForegroundColor Cyan
         Write-Host ""
 
         $disks = Get-WinOpsDiskUsage -ExcludeNetworkDrives -ExcludeRemovableDrives
@@ -450,7 +450,7 @@ function Get-WinOpsStatus {
         }
 
         # Trash status
-        Write-Host "═══ $(Get-WinOpsMessage -Key 'Status_TrashStatus') ═══" -ForegroundColor Cyan
+        Write-Host "=== $(Get-WinOpsMessage -Key 'Status_TrashStatus') ===" -ForegroundColor Cyan
         Write-Host ""
 
         $trashItems = Get-WinOpsTrashList
@@ -505,9 +505,9 @@ function Get-TrashItems {
         Import-Module $trashModule -Force
 
         Write-Host ""
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                          $(Get-WinOpsMessage -Key 'Trash_Title')                                     ║" -ForegroundColor Cyan
-        Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                          $(Get-WinOpsMessage -Key 'Trash_Title')                                     |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
         Write-Host ""
 
         $items = Get-WinOpsTrashList
@@ -526,7 +526,7 @@ function Get-TrashItems {
 
         # Display items in a table format
         Write-Host ("{0,-12} {1,-20} {2,-10} {3,-12} {4}" -f "Hash", "Module", "Size (MB)", "Expires In", "Original Path") -ForegroundColor Gray
-        Write-Host ("{0,-12} {1,-20} {2,-10} {3,-12} {4}" -f "────", "──────", "─────────", "──────────", "─────────────") -ForegroundColor DarkGray
+        Write-Host ("{0,-12} {1,-20} {2,-10} {3,-12} {4}" -f "----", "------", "---------", "----------", "-------------") -ForegroundColor DarkGray
 
         foreach ($item in $items) {
             $hashShort = $item.Hash.Substring(0, 12)
@@ -576,9 +576,9 @@ function Restore-TrashItem {
         Import-Module $trashModule -Force
 
         Write-Host ""
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                       $(Get-WinOpsMessage -Key 'Restore_Title')                                 ║" -ForegroundColor Cyan
-        Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                       $(Get-WinOpsMessage -Key 'Restore_Title')                                 |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
         Write-Host ""
 
         $items = Get-WinOpsTrashList
@@ -660,9 +660,9 @@ function Install-WinOps {
 
     try {
         Write-Host ""
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                      $(Get-WinOpsMessage -Key 'Install_Title')                                     ║" -ForegroundColor Cyan
-        Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                      $(Get-WinOpsMessage -Key 'Install_Title')                                     |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
         Write-Host ""
 
         # Check for admin privileges
@@ -710,9 +710,9 @@ function Uninstall-WinOps {
 
     try {
         Write-Host ""
-        Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                     $(Get-WinOpsMessage -Key 'Uninstall_Title')                                    ║" -ForegroundColor Cyan
-        Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                     $(Get-WinOpsMessage -Key 'Uninstall_Title')                                    |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
         Write-Host ""
 
         # Check for admin privileges

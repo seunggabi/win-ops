@@ -126,8 +126,8 @@ Describe 'I18n Module' {
             $enFile = Join-Path $projectRoot 'resources\en-US.json'
             $koFile = Join-Path $projectRoot 'resources\ko-KR.json'
 
-            $enData = Get-Content -Path $enFile -Raw | ConvertFrom-Json -AsHashtable
-            $koData = Get-Content -Path $koFile -Raw | ConvertFrom-Json -AsHashtable
+            $enData = Get-Content -Path $enFile -Raw | ConvertFrom-Json | ForEach-Object { $h = @{}; $_.PSObject.Properties | ForEach-Object { $h[$_.Name] = $_.Value }; $h }
+            $koData = Get-Content -Path $koFile -Raw | ConvertFrom-Json | ForEach-Object { $h = @{}; $_.PSObject.Properties | ForEach-Object { $h[$_.Name] = $_.Value }; $h }
 
             $enKeys = $enData.Keys | Sort-Object
             $koKeys = $koData.Keys | Sort-Object

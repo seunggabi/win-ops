@@ -362,7 +362,13 @@ Describe "Trash Module - Remove-WinOpsExpiredTrash" {
         # Manually edit index to make it expired
         $trashRoot = Join-Path $env:LOCALAPPDATA "win-ops\trash"
         $indexPath = Join-Path $trashRoot ".index.json"
-        $index = Get-Content $indexPath -Raw | ConvertFrom-Json -AsHashtable
+        $indexJson = Get-Content $indexPath -Raw | ConvertFrom-Json
+        $index = @{ items = @{} }
+        $indexJson.items.PSObject.Properties | ForEach-Object {
+            $entry = @{}
+            $_.Value.PSObject.Properties | ForEach-Object { $entry[$_.Name] = $_.Value }
+            $index.items[$_.Name] = $entry
+        }
 
         $expiredTime = (Get-Date).AddHours(-73).ToString("o")
         $index.items[$trash.Hash].deleted_at = $expiredTime

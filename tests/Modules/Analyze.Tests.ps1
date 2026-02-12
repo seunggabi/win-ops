@@ -350,7 +350,7 @@ Describe 'Analyze Integration Tests' -Tag 'Integration', 'Module' {
             $barLength = 50
 
             $filledLength = [math]::Floor(($currentValue / $maxValue) * $barLength)
-            $bar = '█' * $filledLength + '░' * ($barLength - $filledLength)
+            $bar = '#' * $filledLength + ' ' * ($barLength - $filledLength)
 
             $bar.Length | Should -Be $barLength
             $filledLength | Should -BeGreaterThan 30

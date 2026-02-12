@@ -129,9 +129,9 @@ function Remove-WinOpsFromPath {
 #region Uninstallation Steps
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Red
-Write-Host "║    Win-Ops Uninstallation Script      ║" -ForegroundColor Red
-Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Red
+Write-Host "+========================================+" -ForegroundColor Red
+Write-Host "|    Win-Ops Uninstallation Script      |" -ForegroundColor Red
+Write-Host "+========================================+" -ForegroundColor Red
 Write-Host ""
 
 # Confirmation prompt
@@ -291,9 +291,9 @@ if (Test-Path $parentDir) {
 #region Summary
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║    Uninstallation Complete! ✓          ║" -ForegroundColor Green
-Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "+========================================+" -ForegroundColor Green
+Write-Host "|    Uninstallation Complete! OK          |" -ForegroundColor Green
+Write-Host "+========================================+" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "Uninstallation Summary:" -ForegroundColor Cyan
