@@ -215,7 +215,7 @@ function Test-WinOpsProcessProtected {
         # Load protected processes list
         $protectedProcesses = Get-ProtectedProcesses
 
-        $isProtected = $protectedProcesses.Contains($normalizedName)
+        $isProtected = $protectedProcesses -contains $normalizedName
 
         if ($isProtected) {
             Write-Verbose "Process '$normalizedName' is protected"
