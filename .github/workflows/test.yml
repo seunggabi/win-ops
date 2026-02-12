@@ -12,20 +12,9 @@ jobs:
     name: Run Tests
     runs-on: windows-latest
 
-    strategy:
-      matrix:
-        pwsh-version: ['7.4', 'latest']
-      fail-fast: false
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup PowerShell ${{ matrix.pwsh-version }}
-        if: matrix.pwsh-version != 'latest'
-        uses: actions/setup-powershell@v1
-        with:
-          pwsh-version: ${{ matrix.pwsh-version }}
 
       - name: Install Pester
         shell: pwsh
@@ -45,7 +34,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-pwsh-${{ matrix.pwsh-version }}
+          name: test-results
           path: tests/test-results.xml
           retention-days: 7
 
@@ -53,7 +42,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report-pwsh-${{ matrix.pwsh-version }}
+          name: coverage-report
           path: tests/coverage.xml
           retention-days: 7
 
@@ -62,7 +51,7 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action/windows@v2
         with:
           files: tests/test-results.xml
-          check_name: Test Results (PowerShell ${{ matrix.pwsh-version }})
+          check_name: Test Results
 
       - name: Code Coverage Summary
         if: always()
