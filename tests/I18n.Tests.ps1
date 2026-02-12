@@ -9,8 +9,8 @@
 #>
 
 BeforeAll {
-    $projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-    $modulePath = Join-Path $projectRoot 'lib\core\I18n.psm1'
+    # Import the module using relative path
+    $modulePath = Join-Path $PSScriptRoot '..\lib\core\I18n.psm1'
     Import-Module $modulePath -Force
 }
 
