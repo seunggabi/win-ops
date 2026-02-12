@@ -1,5 +1,4 @@
 @{
-    # CLI - 메인 도움말
     CLI_Help_Title = "Windows 운영 관리자"
     CLI_Help_Usage = "사용법:"
     CLI_Help_Commands = "명령어:"
@@ -10,7 +9,6 @@
     CLI_Help_SafetyFeatures = "안전 기능:"
     CLI_Help_Documentation = "문서:"
 
-    # CLI - 명령어
     CMD_Help = "도움말 메시지 표시"
     CMD_Version = "버전 정보 표시"
     CMD_Analyze = "시스템 분석 및 정리 대상 표시"
@@ -28,17 +26,14 @@
     CMD_Uninstall = "win-ops 예약된 작업 제거"
     CMD_Uninstall_Desc = "예약된 작업 및 선택적으로 데이터 파일 제거"
 
-    # CLI - 옵션
     OPT_DryRun = "실제 변경 없이 분석 수행"
     OPT_Force = "확인 프롬프트 건너뛰기"
     OPT_Verbose = "자세한 출력 활성화"
 
-    # CLI - 버전
     Version_Title = "{0} 버전 {1}"
     Version_PowerShell = "PowerShell 버전: {0}"
     Version_OS = "OS: {0}"
 
-    # 분석
     Analyze_Starting = "정리 기회에 대한 시스템 분석 중..."
     Analyze_PleaseWait = "잠시만 기다려 주세요..."
     Analyze_NoTargets = "정리 대상을 찾을 수 없습니다. 시스템이 깨끗합니다!"
@@ -57,7 +52,6 @@
     Analyze_Top_Items = "상위 {0}개 최대 항목"
     Analyze_Complete = "분석 완료: {0}개 항목, {1} GB 복구 가능"
 
-    # 정리
     Cleanup_Starting = "정리 시작 (DryRun: {0}, Force: {1})"
     Cleanup_Title = "Win-Ops 정리"
     Cleanup_DryRunMode = "DRY RUN 모드 - 변경 사항이 적용되지 않습니다"
@@ -76,7 +70,6 @@
     Cleanup_Failed = "정리 실패: {0}"
     Cleanup_ModuleFailed = "모듈 {0} 실패: {1}"
 
-    # 상태
     Status_Title = "Win-Ops 상태"
     Status_System = "시스템 상태"
     Status_Operation = "작업 상태:"
@@ -96,7 +89,6 @@
     Status_RunListTrash = "모든 휴지통 항목을 보려면 'win-ops list-trash'를 실행하세요"
     Status_Failed = "상태 가져오기 실패: {0}"
 
-    # 휴지통
     Trash_Title = "휴지통 항목"
     Trash_Empty = "휴지통이 비어 있습니다."
     Trash_TotalItems = "전체 항목: {0}"
@@ -104,7 +96,6 @@
     Trash_ToRestore = "항목을 복원하려면 다음을 사용하세요:"
     Trash_ListFailed = "휴지통 항목 나열 실패: {0}"
 
-    # 복원
     Restore_Title = "휴지통에서 복원"
     Restore_Empty = "휴지통이 비어 있습니다. 복원할 항목이 없습니다."
     Restore_SelectPrompt = "복원할 항목을 선택하세요 (종료하려면 'q'):"
@@ -117,7 +108,6 @@
     Restore_Success = "성공적으로 복원됨: {0}"
     Restore_Failed = "휴지통에서 복원 실패: {0}"
 
-    # 설치
     Install_Title = "Win-Ops 설치"
     Install_AdminRequired = "예약된 작업을 설치하려면 관리자 권한이 필요합니다."
     Install_AdminPrompt = "관리자 권한 PowerShell 프롬프트에서 이 명령을 실행하세요:"
@@ -125,7 +115,6 @@
     Install_Complete = "설치 완료!"
     Install_Failed = "설치 실패: {0}"
 
-    # 제거
     Uninstall_Title = "Win-Ops 제거"
     Uninstall_AdminRequired = "예약된 작업을 제거하려면 관리자 권한이 필요합니다."
     Uninstall_AdminPrompt = "관리자 권한 PowerShell 프롬프트에서 이 명령을 실행하세요:"
@@ -133,16 +122,13 @@
     Uninstall_Complete = "제거 완료!"
     Uninstall_Failed = "제거 실패: {0}"
 
-    # 잠금/동시성
     Lock_AnotherInstance = "다른 win-ops 인스턴스가 실행 중입니다. 기다리거나 'win-ops status'로 확인하세요."
     Lock_FailedAcquire = "잠금 획득 실패. 다른 인스턴스가 실행 중일 수 있습니다."
 
-    # 오류/경고
     Error_Unknown = "오류가 발생했습니다: {0}"
     Error_UnknownCommand = "알 수 없는 명령: {0}. 사용 정보는 'help'를 사용하세요."
     Warning_ModuleNotFound = "모듈을 찾을 수 없음: {0}"
 
-    # 설치 스크립트 메시지
     InstallScript_Title = "Win-Ops 설치 스크립트"
     InstallScript_Step_CheckingPS = "단계 1: PowerShell 버전 확인 중..."
     InstallScript_CurrentVersion = "현재 PowerShell 버전: {0}"
@@ -186,7 +172,6 @@
     InstallScript_RunFromDir = "설치 디렉터리에서 실행:"
     InstallScript_OrAddPath = "또는 수동으로 PATH에 추가:"
 
-    # 제거 스크립트 메시지
     UninstallScript_Title = "Win-Ops 제거 스크립트"
     UninstallScript_Warning = "시스템에서 Win-Ops를 제거합니다."
     UninstallScript_InstallPath = "설치 경로: {0}"
@@ -226,13 +211,11 @@
     UninstallScript_DataPreservedAt = "데이터 디렉터리가 다음 위치에 보존되었습니다:"
     UninstallScript_Uninstalled = "Win-Ops가 시스템에서 제거되었습니다."
 
-    # 로거 메시지
     Logger_Initialized = "로거가 {0}에서 {1} 레벨로 초기화되었습니다"
     Logger_LevelChanged = "로그 레벨이 {0}에서 {1}로 변경되었습니다"
     Logger_NotInitialized = "로거가 초기화되지 않았습니다"
     Logger_Cleared = "모든 로그 파일이 지워졌습니다"
 
-    # 캐시 정리
     Cache_Starting = "캐시 정리 시작: {0} (기간: {1}일)"
     Cache_Processing = "캐시 처리 중: {0} - {1}"
     Cache_NoFiles = "캐시 파일을 찾을 수 없음: {0}"
@@ -246,31 +229,26 @@
     Cache_IconSuccess = "아이콘 캐시 재구축 성공"
     Cache_IconFailed = "아이콘 캐시 재구축 실패"
 
-    # 공통 상태 메시지
     Status_Info = "[정보]"
     Status_Success = "[완료]"
     Status_Warning = "[경고]"
     Status_Error = "[오류]"
 
-    # 공통 응답
     Response_Yes = "예"
     Response_No = "아니오"
     Response_NA = "해당 없음"
 
-    # 파일/크기 형식
     Size_Bytes = "{0} 바이트"
     Size_KB = "{0} KB"
     Size_MB = "{0} MB"
     Size_GB = "{0} GB"
     Size_TB = "{0} TB"
 
-    # 시간 형식
     Time_Seconds = "{0}초"
     Time_Minutes = "{0}분"
     Time_Hours = "{0}시간"
     Time_Days = "{0}일"
 
-    # 비교
     Compare_Title = "정리 비교"
     Compare_Before = "이전: {0} GB"
     Compare_After = "이후: {0} GB"

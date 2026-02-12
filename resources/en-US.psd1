@@ -1,5 +1,4 @@
 @{
-    # CLI - Main Help
     CLI_Help_Title = "Windows Operations Manager"
     CLI_Help_Usage = "USAGE:"
     CLI_Help_Commands = "COMMANDS:"
@@ -10,7 +9,6 @@
     CLI_Help_SafetyFeatures = "SAFETY FEATURES:"
     CLI_Help_Documentation = "DOCUMENTATION:"
 
-    # CLI - Commands
     CMD_Help = "Display this help message"
     CMD_Version = "Display version information"
     CMD_Analyze = "Analyze system and show potential cleanup targets"
@@ -28,17 +26,14 @@
     CMD_Uninstall = "Uninstall win-ops scheduled task"
     CMD_Uninstall_Desc = "Removes scheduled task and optionally data files"
 
-    # CLI - Options
     OPT_DryRun = "Perform analysis without making actual changes"
     OPT_Force = "Skip confirmation prompts"
     OPT_Verbose = "Enable verbose output"
 
-    # CLI - Version
     Version_Title = "{0} version {1}"
     Version_PowerShell = "PowerShell version: {0}"
     Version_OS = "OS: {0}"
 
-    # Analysis
     Analyze_Starting = "Analyzing system for cleanup opportunities..."
     Analyze_PleaseWait = "This may take a few moments..."
     Analyze_NoTargets = "No cleanup targets found. Your system is clean!"
@@ -57,7 +52,6 @@
     Analyze_Top_Items = "Top {0} Largest Items"
     Analyze_Complete = "Analysis complete: {0} items, {1} GB reclaimable"
 
-    # Cleanup
     Cleanup_Starting = "Starting cleanup (DryRun: {0}, Force: {1})"
     Cleanup_Title = "Win-Ops Cleanup"
     Cleanup_DryRunMode = "DRY RUN MODE - No changes will be made"
@@ -76,7 +70,6 @@
     Cleanup_Failed = "Cleanup failed: {0}"
     Cleanup_ModuleFailed = "Module {0} failed: {1}"
 
-    # Status
     Status_Title = "Win-Ops Status"
     Status_System = "System Status"
     Status_Operation = "Operation Status:"
@@ -96,7 +89,6 @@
     Status_RunListTrash = "Run 'win-ops list-trash' to see all trash items"
     Status_Failed = "Failed to get status: {0}"
 
-    # Trash
     Trash_Title = "Trash Items"
     Trash_Empty = "Trash is empty."
     Trash_TotalItems = "Total items: {0}"
@@ -104,7 +96,6 @@
     Trash_ToRestore = "To restore an item, use:"
     Trash_ListFailed = "Failed to list trash items: {0}"
 
-    # Restore
     Restore_Title = "Restore from Trash"
     Restore_Empty = "Trash is empty. Nothing to restore."
     Restore_SelectPrompt = "Select item to restore (or 'q' to quit):"
@@ -117,7 +108,6 @@
     Restore_Success = "Successfully restored: {0}"
     Restore_Failed = "Failed to restore from trash: {0}"
 
-    # Install
     Install_Title = "Install Win-Ops"
     Install_AdminRequired = "Administrator privileges required to install scheduled tasks."
     Install_AdminPrompt = "Please run this command from an elevated PowerShell prompt:"
@@ -125,7 +115,6 @@
     Install_Complete = "Installation complete!"
     Install_Failed = "Installation failed: {0}"
 
-    # Uninstall
     Uninstall_Title = "Uninstall Win-Ops"
     Uninstall_AdminRequired = "Administrator privileges required to uninstall scheduled tasks."
     Uninstall_AdminPrompt = "Please run this command from an elevated PowerShell prompt:"
@@ -133,16 +122,13 @@
     Uninstall_Complete = "Uninstallation complete!"
     Uninstall_Failed = "Uninstallation failed: {0}"
 
-    # Lock/Concurrency
     Lock_AnotherInstance = "Another win-ops instance is running. Please wait or use 'win-ops status' to check."
     Lock_FailedAcquire = "Failed to acquire lock. Another instance may be running."
 
-    # Errors/Warnings
     Error_Unknown = "An error occurred: {0}"
     Error_UnknownCommand = "Unknown command: {0}. Use 'help' for usage information."
     Warning_ModuleNotFound = "Module not found: {0}"
 
-    # Installation Script Messages
     InstallScript_Title = "Win-Ops Installation Script"
     InstallScript_Step_CheckingPS = "Step 1: Checking PowerShell version..."
     InstallScript_CurrentVersion = "Current PowerShell version: {0}"
@@ -186,7 +172,6 @@
     InstallScript_RunFromDir = "Run from installation directory:"
     InstallScript_OrAddPath = "Or add to PATH manually:"
 
-    # Uninstallation Script Messages
     UninstallScript_Title = "Win-Ops Uninstallation Script"
     UninstallScript_Warning = "This will remove Win-Ops from your system."
     UninstallScript_InstallPath = "Installation Path: {0}"
@@ -226,13 +211,11 @@
     UninstallScript_DataPreservedAt = "Data directories were preserved at:"
     UninstallScript_Uninstalled = "Win-Ops has been uninstalled from your system."
 
-    # Logger Messages
     Logger_Initialized = "Logger initialized at {0} with level {1}"
     Logger_LevelChanged = "Log level changed from {0} to {1}"
     Logger_NotInitialized = "Logger not initialized"
     Logger_Cleared = "All log files cleared"
 
-    # Cache Cleanup
     Cache_Starting = "Starting cache cleanup: {0} (Age: {1} days)"
     Cache_Processing = "Processing cache: {0} - {1}"
     Cache_NoFiles = "No cache files found for: {0}"
@@ -246,31 +229,26 @@
     Cache_IconSuccess = "Icon cache rebuilt successfully"
     Cache_IconFailed = "Failed to rebuild icon cache"
 
-    # Common Status Messages
     Status_Info = "[INFO]"
     Status_Success = "[OK]"
     Status_Warning = "[WARN]"
     Status_Error = "[ERROR]"
 
-    # Common Responses
     Response_Yes = "Yes"
     Response_No = "No"
     Response_NA = "N/A"
 
-    # File/Size Formatting
     Size_Bytes = "{0} bytes"
     Size_KB = "{0} KB"
     Size_MB = "{0} MB"
     Size_GB = "{0} GB"
     Size_TB = "{0} TB"
 
-    # Time Formatting
     Time_Seconds = "{0}s"
     Time_Minutes = "{0}m"
     Time_Hours = "{0}h"
     Time_Days = "{0}d"
 
-    # Comparison
     Compare_Title = "Cleanup Comparison"
     Compare_Before = "Before: {0} GB"
     Compare_After = "After: {0} GB"
