@@ -89,27 +89,14 @@ Write-Host "✅ Using Pester $($pesterModule.Version)" -ForegroundColor Green
 
 #endregion
 
-#region Load Configuration
-
-$configPath = Join-Path $ScriptRoot "PesterConfiguration.psd1"
-
-if (Test-Path $configPath) {
-    Write-Host "📋 Loading Pester configuration from: $configPath" -ForegroundColor Cyan
-    $configData = Import-PowerShellDataFile -Path $configPath
-}
-else {
-    Write-Warning "Configuration file not found: $configPath"
-    $configData = @{}
-}
-
-#endregion
-
 #region Build Configuration
+
+Write-Host "📋 Building Pester configuration..." -ForegroundColor Cyan
 
 $pesterConfig = New-PesterConfiguration
 
 # Run settings
-$pesterConfig.Run.Path = if ($Path) { $Path } else { $configData.Run.Path }
+$pesterConfig.Run.Path = if ($Path) { $Path } else { './tests' }
 $pesterConfig.Run.Exit = $CI.IsPresent
 $pesterConfig.Run.PassThru = $true
 
@@ -117,25 +104,24 @@ $pesterConfig.Run.PassThru = $true
 if ($Tags) {
     $pesterConfig.Filter.Tag = $Tags
 }
-elseif ($configData.Filter.Tag) {
-    $pesterConfig.Filter.Tag = $configData.Filter.Tag
-}
 
 if ($ExcludeTags) {
     $pesterConfig.Filter.ExcludeTag = $ExcludeTags
-}
-elseif ($configData.Filter.ExcludeTag) {
-    $pesterConfig.Filter.ExcludeTag = $configData.Filter.ExcludeTag
 }
 
 # Code coverage
 if (-not $NoCoverage) {
     $pesterConfig.CodeCoverage.Enabled = $true
-    $pesterConfig.CodeCoverage.Path = $configData.CodeCoverage.Path
-    $pesterConfig.CodeCoverage.OutputFormat = $configData.CodeCoverage.OutputFormat
-    $pesterConfig.CodeCoverage.OutputPath = Join-Path $ScriptRoot $configData.CodeCoverage.OutputPath
-    $pesterConfig.CodeCoverage.OutputEncoding = $configData.CodeCoverage.OutputEncoding
-    $pesterConfig.CodeCoverage.CoveragePercentTarget = $configData.CodeCoverage.CoveragePercentTarget
+    $pesterConfig.CodeCoverage.Path = @(
+        './lib/core/*.psm1',
+        './lib/modules/*.psm1',
+        './lib/utils/*.psm1',
+        './scheduler/*.psm1'
+    )
+    $pesterConfig.CodeCoverage.OutputFormat = 'JaCoCo'
+    $pesterConfig.CodeCoverage.OutputPath = Join-Path $ScriptRoot './tests/coverage.xml'
+    $pesterConfig.CodeCoverage.OutputEncoding = 'UTF8'
+    $pesterConfig.CodeCoverage.CoveragePercentTarget = 80
 }
 else {
     $pesterConfig.CodeCoverage.Enabled = $false
@@ -143,10 +129,10 @@ else {
 
 # Test results
 $pesterConfig.TestResult.Enabled = $true
-$pesterConfig.TestResult.OutputFormat = $configData.TestResult.OutputFormat
-$pesterConfig.TestResult.OutputPath = Join-Path $ScriptRoot $configData.TestResult.OutputPath
-$pesterConfig.TestResult.OutputEncoding = $configData.TestResult.OutputEncoding
-$pesterConfig.TestResult.TestSuiteName = $configData.TestResult.TestSuiteName
+$pesterConfig.TestResult.OutputFormat = 'NUnitXml'
+$pesterConfig.TestResult.OutputPath = Join-Path $ScriptRoot './tests/test-results.xml'
+$pesterConfig.TestResult.OutputEncoding = 'UTF8'
+$pesterConfig.TestResult.TestSuiteName = 'win-ops Test Suite'
 
 # Output settings
 if ($CI) {
@@ -154,24 +140,21 @@ if ($CI) {
     $pesterConfig.Output.CIFormat = 'GithubActions'
 }
 else {
-    $pesterConfig.Output.Verbosity = $configData.Output.Verbosity
-    $pesterConfig.Output.StackTraceVerbosity = $configData.Output.StackTraceVerbosity
+    $pesterConfig.Output.Verbosity = 'Detailed'
+    $pesterConfig.Output.StackTraceVerbosity = 'Filtered'
 }
 
 # Parallel execution
 if ($Parallel) {
     $pesterConfig.Run.Container = New-PesterContainer -Path $pesterConfig.Run.Path
-    if ($configData.ParallelizationMode) {
-        # Note: Parallel execution requires proper container setup
-        Write-Host "⚡ Parallel execution enabled (experimental)" -ForegroundColor Cyan
-    }
+    Write-Host "⚡ Parallel execution enabled (experimental)" -ForegroundColor Cyan
 }
 
 # Should settings
-$pesterConfig.Should.ErrorAction = $configData.Should.ErrorAction
+$pesterConfig.Should.ErrorAction = 'Stop'
 
 # TestDrive
-$pesterConfig.TestDrive.Enabled = $configData.TestDrive.Enabled
+$pesterConfig.TestDrive.Enabled = $true
 
 #endregion
 
