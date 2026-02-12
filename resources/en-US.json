@@ -246,5 +246,22 @@
   "Registry_Failed": "Failed to remove: {0}",
   "Registry_BackupSaved": "Backups saved to: {0}",
   "Registry_Complete": "Registry cleanup complete: {0} entries cleaned",
-  "Registry_DryRun": "Found {0} orphaned entries (dry run)"
+  "Registry_DryRun": "Found {0} orphaned entries (dry run)",
+  "History_Starting": "Cleaning history and privacy data...",
+  "History_RunDialog": "Run dialog history: {0} entries",
+  "History_ExplorerPaths": "Explorer address bar history: {0} entries",
+  "History_ExplorerSearch": "Explorer search history: {0} entries",
+  "History_JumpLists": "Jump lists: {0} items",
+  "History_RecentDocs": "Recent documents: {0} shortcuts",
+  "History_ActivityTimeline": "Activity timeline: {0} items",
+  "History_Clipboard": "Clipboard history cleared",
+  "History_ShellHistory": "Shell command history: {0} commands",
+  "History_WindowsSearch": "Windows Search history: {0} items",
+  "History_Complete": "History cleanup complete ({0} items)",
+  "OrphanApp_Starting": "Scanning for orphaned application data...",
+  "OrphanApp_Found": "Found {0} orphaned items ({1} GB)",
+  "OrphanApp_Complete": "Orphaned app data cleanup complete: {0} items removed",
+  "Status_LastCleanup": "Last Cleanup",
+  "Status_CleanupTime": "Time: {0}",
+  "Status_CleanupDryRun": "Mode: DRY RUN"
 }

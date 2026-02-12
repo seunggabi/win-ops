@@ -428,9 +428,9 @@ function Clear-WinOpsOrphanedAppData {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     [OutputType([PSCustomObject])]
     param(
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateSet('AppData', 'Shortcuts', 'ProgramFiles', 'All')]
-        [string]$DataType,
+        [string]$DataType = 'All',
 
         [Parameter()]
         [ValidateRange(0, 365)]
