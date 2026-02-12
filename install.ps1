@@ -369,7 +369,7 @@ if ($AddToPath) {
 }
 
 Write-Host ""
-Write-Host "Documentation: https://github.com/your-org/win-ops" -ForegroundColor Gray
+Write-Host "Documentation: https://github.com/seunggabi/win-ops" -ForegroundColor Gray
 Write-Host ""
 
 #endregion
