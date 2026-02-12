@@ -576,6 +576,13 @@ function Set-WinOpsConfig {
 
 # Export module members
 Export-ModuleMember -Function @(
+    'Get-ConfigPath',
+    'Get-DefaultConfigPath',
+    'Expand-EnvironmentVariables',
+    'Expand-ConfigObject',
+    'Merge-ConfigObject',
+    'Read-JsonConfigFile',
+    'Write-JsonConfigFile',
     'Get-WinOpsConfig',
     'Set-WinOpsConfig',
     'Initialize-WinOpsConfig',
