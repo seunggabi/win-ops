@@ -463,8 +463,8 @@ Describe "Safety Module - Result Object Structure" {
         $result.SizeSafe | Should -BeNullOrEmpty     # Not tested
         $result.NotWRP | Should -Not -BeNullOrEmpty
         $result.OverallSafe | Should -Not -BeNullOrEmpty
-        $result.Errors | Should -Not -BeNullOrEmpty
-        $result.Warnings | Should -Not -BeNullOrEmpty
+        $result.PSObject.Properties['Errors'] | Should -Not -BeNullOrEmpty
+        $result.PSObject.Properties['Warnings'] | Should -Not -BeNullOrEmpty
     }
 
     It "Errors array is always present" {

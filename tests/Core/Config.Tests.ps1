@@ -377,7 +377,7 @@ Describe "Config Module - Get-WinOpsConfig" {
 
         $path = Get-WinOpsConfig -Key "trash.path"
         $path | Should -Not -Match "%"
-        $path | Should -Match $env:LOCALAPPDATA
+        $path | Should -Match [regex]::Escape($env:LOCALAPPDATA)
     }
 }
 
@@ -449,7 +449,7 @@ Describe "Config Module - Edge Cases" {
     It "Handles special characters in values" {
         New-Item -Path $script:TestConfigDir -ItemType Directory -Force | Out-Null
 
-        $specialValue = "C:\Path\With\Backslashes\And\$pecial\Characters"
+        $specialValue = 'C:\Path\With\Backslashes\And\$pecial\Characters'
         Set-WinOpsConfig -Key "special" -Value $specialValue -Path $script:TestConfigPath -Confirm:$false
 
         $config = Get-Content $script:TestConfigPath -Raw | ConvertFrom-Json
