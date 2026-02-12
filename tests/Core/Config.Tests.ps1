@@ -377,7 +377,8 @@ Describe "Config Module - Get-WinOpsConfig" {
 
         $path = Get-WinOpsConfig -Key "trash.path"
         $path | Should -Not -Match "%"
-        $path | Should -Match [regex]::Escape($env:LOCALAPPDATA)
+        $escapedPath = [regex]::Escape($env:LOCALAPPDATA)
+        $path | Should -Match $escapedPath
     }
 }
 

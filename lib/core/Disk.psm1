@@ -76,9 +76,8 @@ function ConvertTo-HumanReadableSize {
             $index++
         }
 
-        # Use explicit rounding to avoid precision issues
-        $roundedValue = [Math]::Round($value, $Precision, [MidpointRounding]::AwayFromZero)
-        return "{0:N$Precision} {1}" -f $roundedValue, $units[$index]
+        # Use standard formatting with precision
+        return "{0:N$Precision} {1}" -f $value, $units[$index]
     }
 }
 

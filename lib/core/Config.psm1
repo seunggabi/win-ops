@@ -80,7 +80,8 @@ function Expand-EnvironmentVariables {
 function Expand-ConfigObject {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
+        [AllowNull()]
         $Object
     )
 
