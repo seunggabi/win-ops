@@ -28,7 +28,7 @@ jobs:
       - name: Run Tests
         shell: pwsh
         run: |
-          .\Run-Tests.ps1 -CI -Parallel
+          .\Run-Tests.ps1 -CI
 
       - name: Upload Test Results
         if: always()
