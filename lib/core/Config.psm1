@@ -226,7 +226,7 @@ function Read-JsonConfigFile {
         }
     }
     catch {
-        Write-Error "Failed to read configuration file '$Path': $_"
+        Write-Warning "Failed to read configuration file '$Path': $_"
         return $null
     }
 }
