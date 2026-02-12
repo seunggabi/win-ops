@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"which powershell\",\"description\":\"Check if powershell is available\"}",
-  "error": "Exit code 1\npowershell not found",
-  "timestamp": "2026-02-11T19:42:07.391Z",
-  "retry_count": 2
+  "tool_input_preview": "{\"command\":\"pwsh -NoProfile -Command \\\"Import-Module ./lib/core/I18n.psm1 -Force; Initialize-WinOpsI18n; Write-Host 'Current Language:' (Get-WinOpsCurrentLanguage); Write-Host 'Test Message:' (Get-Win...",
+  "error": "Exit code 127\n(eval):1: command not found: pwsh",
+  "timestamp": "2026-02-12T02:54:37.472Z",
+  "retry_count": 1
 }

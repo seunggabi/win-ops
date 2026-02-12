@@ -62,6 +62,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Import I18n module
+$scriptRoot = $PSScriptRoot
+$i18nModule = Join-Path $scriptRoot 'lib\core\I18n.psm1'
+if (Test-Path $i18nModule) {
+    Import-Module $i18nModule -Force
+    Initialize-WinOpsI18n
+}
+
 #region Helper Functions
 
 function Write-InstallMessage {
@@ -79,10 +87,10 @@ function Write-InstallMessage {
     }
 
     $prefix = switch ($Type) {
-        'Info'    { '[INFO]' }
-        'Success' { '[OK]' }
-        'Warning' { '[WARN]' }
-        'Error'   { '[ERROR]' }
+        'Info'    { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Info' } else { '[INFO]' } }
+        'Success' { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Success' } else { '[OK]' } }
+        'Warning' { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Warning' } else { '[WARN]' } }
+        'Error'   { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Error' } else { '[ERROR]' } }
     }
 
     Write-Host "$prefix $Message" -ForegroundColor $color
@@ -99,7 +107,12 @@ function Test-PowerShell7Installed {
         $pwshPath = (Get-Command pwsh -ErrorAction SilentlyContinue).Path
         if ($pwshPath) {
             $version = & pwsh -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
-            Write-InstallMessage "Found PowerShell: $version at $pwshPath" -Type Info
+            $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+                "Found PowerShell: $version at $pwshPath"
+            } else {
+                "Found PowerShell: $version at $pwshPath"
+            }
+            Write-InstallMessage $msg -Type Info
             return $true
         }
         return $false
@@ -114,17 +127,37 @@ function Add-WinOpsToPath {
     $currentPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 
     if ($currentPath -like "*$BinPath*") {
-        Write-InstallMessage "Win-Ops is already in PATH" -Type Info
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'InstallScript_AlreadyInPath'
+        } else {
+            "Win-Ops is already in PATH"
+        }
+        Write-InstallMessage $msg -Type Info
         return
     }
 
     try {
         $newPath = "$currentPath;$BinPath"
         [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
-        Write-InstallMessage "Added to PATH: $BinPath" -Type Success
-        Write-InstallMessage "Restart your terminal for PATH changes to take effect" -Type Warning
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'InstallScript_AddedToPath' -Args $BinPath
+        } else {
+            "Added to PATH: $BinPath"
+        }
+        Write-InstallMessage $msg -Type Success
+        $msg2 = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'InstallScript_RestartTerminal'
+        } else {
+            "Restart your terminal for PATH changes to take effect"
+        }
+        Write-InstallMessage $msg2 -Type Warning
     } catch {
-        Write-InstallMessage "Failed to add to PATH: $_" -Type Error
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'InstallScript_AddToPathFailed' -Args $_
+        } else {
+            "Failed to add to PATH: $_"
+        }
+        Write-InstallMessage $msg -Type Error
         throw
     }
 }

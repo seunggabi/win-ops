@@ -32,6 +32,13 @@ if (Test-Path (Join-Path $utilsModulePath 'Format.psm1')) {
     Import-Module (Join-Path $utilsModulePath 'Format.psm1') -Force -ErrorAction SilentlyContinue
 }
 
+# Import I18n module
+$i18nModulePath = Join-Path $coreModulePath 'I18n.psm1'
+if ((Test-Path $i18nModulePath) -and -not (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue)) {
+    Import-Module $i18nModulePath -Force -ErrorAction SilentlyContinue
+    Initialize-WinOpsI18n -ErrorAction SilentlyContinue
+}
+
 #region Category Definitions
 
 $script:CleanupCategories = @{
@@ -390,7 +397,12 @@ function Get-WinOpsAnalysis {
         [switch]$NoVisual
     )
 
-    Write-WinOpsLog -Level INFO -Message "Starting cleanup analysis (Age filter: $AgeInDays days)"
+    $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Analyze_Starting'
+    } else {
+        "Starting cleanup analysis (Age filter: $AgeInDays days)"
+    }
+    Write-WinOpsLog -Level INFO -Message $msg
 
     $allTargets = [List[PSCustomObject]]::new()
 
@@ -479,19 +491,39 @@ function Get-WinOpsAnalysis {
 
     # Display visual report
     if (-not $NoVisual) {
+        $titleMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Report_Title'
+        } else {
+            "Win-Ops Cleanup Analysis Report"
+        }
         Write-Host ""
         Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                    Win-Ops Cleanup Analysis Report                       ║" -ForegroundColor Cyan
+        Write-Host "║                    $titleMsg                       ║" -ForegroundColor Cyan
         Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "Analysis Time: " -NoNewline
-        Write-Host (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -ForegroundColor Yellow
-        Write-Host "Age Filter: " -NoNewline
-        Write-Host "$AgeInDays days" -ForegroundColor Yellow
+
+        $timeLabel = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Report_Time' -Args (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        } else {
+            "Analysis Time: " + (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        }
+        Write-Host $timeLabel -ForegroundColor Yellow
+
+        $ageLabel = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Report_AgeFilter' -Args $AgeInDays
+        } else {
+            "Age Filter: $AgeInDays days"
+        }
+        Write-Host $ageLabel -ForegroundColor Yellow
         Write-Host ""
 
         # Category summary with bars
-        Write-Host "═══ Category Summary ═══" -ForegroundColor Cyan
+        $categorySummaryLabel = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Category_Summary'
+        } else {
+            "Category Summary"
+        }
+        Write-Host "═══ $categorySummaryLabel ═══" -ForegroundColor Cyan
         Write-Host ""
 
         $maxSize = ($categorySummary | Measure-Object -Property TotalSizeGB -Maximum).Maximum
@@ -506,18 +538,42 @@ function Get-WinOpsAnalysis {
         }
 
         Write-Host ""
-        Write-Host "═══ Summary ═══" -ForegroundColor Cyan
-        Write-Host "Total Reclaimable Space: " -NoNewline
-        Write-Host ("{0:N2} GB" -f $totalSizeGB) -ForegroundColor Green -NoNewline
-        Write-Host " ({0:N2} MB)" -f $totalSizeMB -ForegroundColor Gray
-        Write-Host "Total Items: " -NoNewline
-        Write-Host $allTargets.Count -ForegroundColor Yellow
-        Write-Host "Categories: " -NoNewline
-        Write-Host $categorySummary.Count -ForegroundColor Yellow
+        $summaryLabel = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Summary'
+        } else {
+            "Summary"
+        }
+        Write-Host "═══ $summaryLabel ═══" -ForegroundColor Cyan
+
+        $reclaimableMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Total_Reclaimable' -Args ("{0:N2}" -f $totalSizeGB), ("{0:N2}" -f $totalSizeMB)
+        } else {
+            "Total Reclaimable Space: {0:N2} GB ({1:N2} MB)" -f $totalSizeGB, $totalSizeMB
+        }
+        Write-Host $reclaimableMsg -ForegroundColor Green
+
+        $itemsMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Total_Items' -Args $allTargets.Count
+        } else {
+            "Total Items: $($allTargets.Count)"
+        }
+        Write-Host $itemsMsg -ForegroundColor Yellow
+
+        $catsMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Categories' -Args $categorySummary.Count
+        } else {
+            "Categories: $($categorySummary.Count)"
+        }
+        Write-Host $catsMsg -ForegroundColor Yellow
         Write-Host ""
 
         # Top N items
-        Write-Host "═══ Top $TopN Largest Items ═══" -ForegroundColor Cyan
+        $topItemsLabel = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Analyze_Top_Items' -Args $TopN
+        } else {
+            "Top $TopN Largest Items"
+        }
+        Write-Host "═══ $topItemsLabel ═══" -ForegroundColor Cyan
         Write-Host ""
 
         $rank = 1
@@ -563,7 +619,12 @@ function Get-WinOpsAnalysis {
         }
     }
 
-    Write-WinOpsLog -Level INFO -Message "Analysis complete: $($allTargets.Count) items, $($totalSizeGB) GB reclaimable"
+    $completeMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Analyze_Complete' -Args $allTargets.Count, $totalSizeGB
+    } else {
+        "Analysis complete: $($allTargets.Count) items, $($totalSizeGB) GB reclaimable"
+    }
+    Write-WinOpsLog -Level INFO -Message $completeMsg
 
     return $result
 }
@@ -616,18 +677,42 @@ function Compare-WinOpsAnalysis {
     }
 
     Write-Host ""
-    Write-Host "═══ Cleanup Comparison ═══" -ForegroundColor Cyan
+    $titleMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Compare_Title'
+    } else {
+        "Cleanup Comparison"
+    }
+    Write-Host "═══ $titleMsg ═══" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Before: " -NoNewline
-    Write-Host ("{0:N2} GB" -f $comparison.BeforeGB) -ForegroundColor Yellow
-    Write-Host "After:  " -NoNewline
-    Write-Host ("{0:N2} GB" -f $comparison.AfterGB) -ForegroundColor Yellow
+
+    $beforeMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Compare_Before' -Args ("{0:N2}" -f $comparison.BeforeGB)
+    } else {
+        "Before: {0:N2} GB" -f $comparison.BeforeGB
+    }
+    Write-Host $beforeMsg -ForegroundColor Yellow
+
+    $afterMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Compare_After' -Args ("{0:N2}" -f $comparison.AfterGB)
+    } else {
+        "After: {0:N2} GB" -f $comparison.AfterGB
+    }
+    Write-Host $afterMsg -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "Freed:  " -NoNewline
-    Write-Host ("{0:N2} GB" -f $comparison.FreedGB) -ForegroundColor Green -NoNewline
-    Write-Host (" ({0}%)" -f $comparison.PercentageReduction) -ForegroundColor Gray
-    Write-Host "Items Removed: " -NoNewline
-    Write-Host $comparison.ItemsRemoved -ForegroundColor Green
+
+    $freedMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Compare_Freed' -Args ("{0:N2}" -f $comparison.FreedGB), $comparison.PercentageReduction
+    } else {
+        "Freed: {0:N2} GB ({1}%)" -f $comparison.FreedGB, $comparison.PercentageReduction
+    }
+    Write-Host $freedMsg -ForegroundColor Green
+
+    $itemsMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Compare_ItemsRemoved' -Args $comparison.ItemsRemoved
+    } else {
+        "Items Removed: $($comparison.ItemsRemoved)"
+    }
+    Write-Host $itemsMsg -ForegroundColor Green
     Write-Host ""
 
     return $comparison

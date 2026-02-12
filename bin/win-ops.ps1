@@ -74,6 +74,13 @@ if ($Verbose) {
 # Get script root directory
 $script:ScriptRoot = Split-Path -Parent $PSCommandPath | Split-Path -Parent
 
+# Import I18n module for localized messages
+$i18nModule = Join-Path $script:ScriptRoot 'lib\core\I18n.psm1'
+if (Test-Path $i18nModule) {
+    Import-Module $i18nModule -Force
+    Initialize-WinOpsI18n
+}
+
 function Get-WinOpsVersion {
     <#
     .SYNOPSIS
@@ -82,9 +89,9 @@ function Get-WinOpsVersion {
     [CmdletBinding()]
     param()
 
-    Write-Host "$script:ModuleName version $script:ModuleVersion" -ForegroundColor Cyan
-    Write-Host "PowerShell version: $($PSVersionTable.PSVersion)" -ForegroundColor Gray
-    Write-Host "OS: $($PSVersionTable.OS)" -ForegroundColor Gray
+    Write-Host (Get-WinOpsMessage -Key 'Version_Title' -Args $script:ModuleName, $script:ModuleVersion) -ForegroundColor Cyan
+    Write-Host (Get-WinOpsMessage -Key 'Version_PowerShell' -Args $PSVersionTable.PSVersion) -ForegroundColor Gray
+    Write-Host (Get-WinOpsMessage -Key 'Version_OS' -Args $PSVersionTable.OS) -ForegroundColor Gray
 }
 
 function Get-WinOpsHelp {
@@ -218,26 +225,26 @@ function Start-WinOpsAnalysis {
 
         Import-Module $analyzeModule -Force
 
-        Write-Host "`nAnalyzing system for cleanup opportunities..." -ForegroundColor Cyan
-        Write-Host "This may take a few moments...`n" -ForegroundColor Gray
+        Write-Host "`n$(Get-WinOpsMessage -Key 'Analyze_Starting')" -ForegroundColor Cyan
+        Write-Host "$(Get-WinOpsMessage -Key 'Analyze_PleaseWait')`n" -ForegroundColor Gray
 
         # Run analysis
         $analysis = Get-WinOpsAnalysis -Detailed:$false -TopN 20
 
         if ($analysis.TotalItemCount -eq 0) {
-            Write-Host "No cleanup targets found. Your system is clean!" -ForegroundColor Green
+            Write-Host (Get-WinOpsMessage -Key 'Analyze_NoTargets') -ForegroundColor Green
             return
         }
 
-        Write-Host "`nTo perform cleanup, run:" -ForegroundColor Yellow
+        Write-Host "`n$(Get-WinOpsMessage -Key 'Analyze_ToPerformCleanup')" -ForegroundColor Yellow
         Write-Host "  win-ops run --dry-run  " -ForegroundColor White -NoNewline
-        Write-Host "(preview changes)" -ForegroundColor Gray
+        Write-Host (Get-WinOpsMessage -Key 'Analyze_PreviewChanges') -ForegroundColor Gray
         Write-Host "  win-ops run            " -ForegroundColor White -NoNewline
-        Write-Host "(execute cleanup)" -ForegroundColor Gray
+        Write-Host (Get-WinOpsMessage -Key 'Analyze_ExecuteCleanup') -ForegroundColor Gray
         Write-Host ""
     }
     catch {
-        Write-Error "Analysis failed: $_"
+        Write-Error (Get-WinOpsMessage -Key 'Analyze_Failed' -Args $_)
         Write-Verbose $_.ScriptStackTrace
     }
 }
@@ -283,61 +290,61 @@ function Start-WinOpsCleanup {
         $logPath = Join-Path $logDir 'win-ops.log'
         Initialize-WinOpsLogger -LogPath $logPath -LogLevel INFO
 
-        Write-WinOpsLog -Level INFO -Message "Starting cleanup (DryRun: $DryRun, Force: $Force)"
+        Write-WinOpsLog -Level INFO -Message (Get-WinOpsMessage -Key 'Cleanup_Starting' -Args $DryRun, $Force)
 
         # Check for lock
         if (Test-WinOpsLocked) {
-            Write-Warning "Another win-ops instance is running. Please wait or use 'win-ops status' to check."
+            Write-Warning (Get-WinOpsMessage -Key 'Lock_AnotherInstance')
             return
         }
 
         # Acquire lock
         if (-not (Lock-WinOps -TimeoutSeconds 30)) {
-            Write-Error "Failed to acquire lock. Another instance may be running."
+            Write-Error (Get-WinOpsMessage -Key 'Lock_FailedAcquire')
             return
         }
 
         try {
-            Write-Host "`nWin-Ops Cleanup" -ForegroundColor Cyan
+            Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Title')" -ForegroundColor Cyan
             Write-Host "═══════════════`n" -ForegroundColor Cyan
 
             if ($DryRun) {
-                Write-Host "DRY RUN MODE - No changes will be made`n" -ForegroundColor Yellow
+                Write-Host "$(Get-WinOpsMessage -Key 'Cleanup_DryRunMode')`n" -ForegroundColor Yellow
             }
 
             # Load configuration
             $config = Get-WinOpsConfig
 
             if (-not $config) {
-                Write-Warning "Configuration not found. Initializing..."
+                Write-Warning (Get-WinOpsMessage -Key 'Cleanup_ConfigNotFound')
                 Initialize-WinOpsConfig
                 $config = Get-WinOpsConfig
             }
 
             # Perform analysis before cleanup
-            Write-Host "Analyzing cleanup targets..." -ForegroundColor Cyan
+            Write-Host (Get-WinOpsMessage -Key 'Cleanup_AnalyzingTargets') -ForegroundColor Cyan
             $beforeAnalysis = Get-WinOpsAnalysis -NoVisual
 
             if ($beforeAnalysis.TotalItemCount -eq 0) {
-                Write-Host "`nNo cleanup targets found. Your system is clean!" -ForegroundColor Green
+                Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_NoTargets')" -ForegroundColor Green
                 return
             }
 
             # Confirmation prompt
             if (-not $Force -and -not $DryRun) {
-                Write-Host "`nReady to clean:" -ForegroundColor Yellow
-                Write-Host "  Items: $($beforeAnalysis.TotalItemCount)" -ForegroundColor White
-                Write-Host "  Space: $($beforeAnalysis.TotalReclaimableGB) GB" -ForegroundColor White
+                Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_ReadyToClean')" -ForegroundColor Yellow
+                Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Items' -Args $beforeAnalysis.TotalItemCount)" -ForegroundColor White
+                Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Space' -Args $beforeAnalysis.TotalReclaimableGB)" -ForegroundColor White
                 Write-Host ""
-                $response = Read-Host "Proceed with cleanup? (y/N)"
+                $response = Read-Host (Get-WinOpsMessage -Key 'Cleanup_Confirm')
                 if ($response -notmatch '^[Yy]') {
-                    Write-Host "Cleanup cancelled." -ForegroundColor Gray
+                    Write-Host (Get-WinOpsMessage -Key 'Cleanup_Cancelled') -ForegroundColor Gray
                     return
                 }
             }
 
             # Execute cleanup modules
-            Write-Host "`nExecuting cleanup modules..." -ForegroundColor Cyan
+            Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Executing')" -ForegroundColor Cyan
             $results = @()
 
             $modulesToRun = @('CacheCleanup', 'TmpCleanup', 'LogCleanup')
@@ -356,7 +363,7 @@ function Start-WinOpsCleanup {
                     $functionName = "Clear-WinOps$($moduleName.Replace('Cleanup', ''))"
 
                     if (Get-Command $functionName -ErrorAction SilentlyContinue) {
-                        Write-Host "  Running: $moduleName..." -ForegroundColor Gray
+                        Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Running' -Args $moduleName)" -ForegroundColor Gray
 
                         $params = @{
                             DryRun = $DryRun
@@ -367,19 +374,19 @@ function Start-WinOpsCleanup {
                     }
                 }
                 catch {
-                    Write-Warning "Module $moduleName failed: $_"
+                    Write-Warning (Get-WinOpsMessage -Key 'Cleanup_ModuleFailed' -Args $moduleName, $_)
                 }
             }
 
-            Write-Host "`nCleanup complete!" -ForegroundColor Green
-            Write-Host "Run 'win-ops status' to see results.`n" -ForegroundColor Gray
+            Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Complete')" -ForegroundColor Green
+            Write-Host "$(Get-WinOpsMessage -Key 'Cleanup_SeeResults')`n" -ForegroundColor Gray
         }
         finally {
             Unlock-WinOps
         }
     }
     catch {
-        Write-Error "Cleanup failed: $_"
+        Write-Error (Get-WinOpsMessage -Key 'Cleanup_Failed' -Args $_)
         Write-Verbose $_.ScriptStackTrace
     }
 }
@@ -404,26 +411,26 @@ function Get-WinOpsStatus {
 
         Write-Host ""
         Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                          Win-Ops Status                                  ║" -ForegroundColor Cyan
+        Write-Host "║                          $(Get-WinOpsMessage -Key 'Status_Title')                                  ║" -ForegroundColor Cyan
         Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
         Write-Host ""
 
         # System status
-        Write-Host "═══ System Status ═══" -ForegroundColor Cyan
+        Write-Host "═══ $(Get-WinOpsMessage -Key 'Status_System') ═══" -ForegroundColor Cyan
         Write-Host ""
 
         # Lock status
         $isLocked = Test-WinOpsLocked
-        Write-Host "Operation Status: " -NoNewline
+        Write-Host "$(Get-WinOpsMessage -Key 'Status_Operation') " -NoNewline
         if ($isLocked) {
-            Write-Host "RUNNING" -ForegroundColor Yellow
+            Write-Host (Get-WinOpsMessage -Key 'Status_Running') -ForegroundColor Yellow
         } else {
-            Write-Host "IDLE" -ForegroundColor Green
+            Write-Host (Get-WinOpsMessage -Key 'Status_Idle') -ForegroundColor Green
         }
 
         # Disk usage
         Write-Host ""
-        Write-Host "═══ Disk Usage ═══" -ForegroundColor Cyan
+        Write-Host "═══ $(Get-WinOpsMessage -Key 'Status_DiskUsage') ═══" -ForegroundColor Cyan
         Write-Host ""
 
         $disks = Get-WinOpsDiskUsage -ExcludeNetworkDrives -ExcludeRemovableDrives
@@ -446,19 +453,17 @@ function Get-WinOpsStatus {
         }
 
         # Trash status
-        Write-Host "═══ Trash Status ═══" -ForegroundColor Cyan
+        Write-Host "═══ $(Get-WinOpsMessage -Key 'Status_TrashStatus') ═══" -ForegroundColor Cyan
         Write-Host ""
 
         $trashItems = Get-WinOpsTrashList
 
         if ($trashItems) {
             $totalSize = ($trashItems | Measure-Object -Property SizeMB -Sum).Sum
-            Write-Host "Items in trash: " -NoNewline
-            Write-Host $trashItems.Count -ForegroundColor Yellow
-            Write-Host "Total size: " -NoNewline
-            Write-Host ("{0:N2} GB" -f ($totalSize / 1024)) -ForegroundColor Yellow
+            Write-Host "$(Get-WinOpsMessage -Key 'Status_TrashItems' -Args $trashItems.Count)" -ForegroundColor Yellow
+            Write-Host (Get-WinOpsMessage -Key 'Status_TrashSize' -Args ("{0:N2}" -f ($totalSize / 1024))) -ForegroundColor Yellow
             Write-Host ""
-            Write-Host "Recent items:" -ForegroundColor Gray
+            Write-Host "$(Get-WinOpsMessage -Key 'Status_TrashRecent')" -ForegroundColor Gray
 
             $recentItems = $trashItems | Select-Object -First 5
             foreach ($item in $recentItems) {
@@ -466,19 +471,19 @@ function Get-WinOpsStatus {
             }
 
             if ($trashItems.Count -gt 5) {
-                Write-Host "  ... and $($trashItems.Count - 5) more items" -ForegroundColor DarkGray
+                Write-Host "  $(Get-WinOpsMessage -Key 'Status_TrashMore' -Args ($trashItems.Count - 5))" -ForegroundColor DarkGray
             }
         } else {
-            Write-Host "Trash is empty" -ForegroundColor Green
+            Write-Host (Get-WinOpsMessage -Key 'Status_TrashEmpty') -ForegroundColor Green
         }
 
         Write-Host ""
-        Write-Host "Run 'win-ops analyze' for cleanup analysis" -ForegroundColor Gray
-        Write-Host "Run 'win-ops list-trash' to see all trash items" -ForegroundColor Gray
+        Write-Host (Get-WinOpsMessage -Key 'Status_RunAnalyze') -ForegroundColor Gray
+        Write-Host (Get-WinOpsMessage -Key 'Status_RunListTrash') -ForegroundColor Gray
         Write-Host ""
     }
     catch {
-        Write-Error "Failed to get status: $_"
+        Write-Error (Get-WinOpsMessage -Key 'Status_Failed' -Args $_)
         Write-Verbose $_.ScriptStackTrace
     }
 }
@@ -504,24 +509,23 @@ function Get-TrashItems {
 
         Write-Host ""
         Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                          Trash Items                                     ║" -ForegroundColor Cyan
+        Write-Host "║                          $(Get-WinOpsMessage -Key 'Trash_Title')                                     ║" -ForegroundColor Cyan
         Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
         Write-Host ""
 
         $items = Get-WinOpsTrashList
 
         if (-not $items -or $items.Count -eq 0) {
-            Write-Host "Trash is empty." -ForegroundColor Green
+            Write-Host (Get-WinOpsMessage -Key 'Trash_Empty') -ForegroundColor Green
             Write-Host ""
             return
         }
 
         $totalSize = ($items | Measure-Object -Property SizeMB -Sum).Sum
 
-        Write-Host "Total items: " -NoNewline
-        Write-Host $items.Count -ForegroundColor Yellow
-        Write-Host "Total size: " -NoNewline
-        Write-Host ("{0:N2} GB`n" -f ($totalSize / 1024)) -ForegroundColor Yellow
+        Write-Host (Get-WinOpsMessage -Key 'Trash_TotalItems' -Args $items.Count) -ForegroundColor Yellow
+        Write-Host (Get-WinOpsMessage -Key 'Trash_TotalSize' -Args ("{0:N2}" -f ($totalSize / 1024))) -ForegroundColor Yellow
+        Write-Host ""
 
         # Display items in a table format
         Write-Host ("{0,-12} {1,-20} {2,-10} {3,-12} {4}" -f "Hash", "Module", "Size (MB)", "Expires In", "Original Path") -ForegroundColor Gray
@@ -545,12 +549,12 @@ function Get-TrashItems {
         }
 
         Write-Host ""
-        Write-Host "To restore an item, use:" -ForegroundColor Gray
+        Write-Host (Get-WinOpsMessage -Key 'Trash_ToRestore') -ForegroundColor Gray
         Write-Host "  win-ops restore" -ForegroundColor White
         Write-Host ""
     }
     catch {
-        Write-Error "Failed to list trash items: $_"
+        Write-Error (Get-WinOpsMessage -Key 'Trash_ListFailed' -Args $_)
         Write-Verbose $_.ScriptStackTrace
     }
 }
@@ -576,20 +580,20 @@ function Restore-TrashItem {
 
         Write-Host ""
         Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                       Restore from Trash                                 ║" -ForegroundColor Cyan
+        Write-Host "║                       $(Get-WinOpsMessage -Key 'Restore_Title')                                 ║" -ForegroundColor Cyan
         Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
         Write-Host ""
 
         $items = Get-WinOpsTrashList
 
         if (-not $items -or $items.Count -eq 0) {
-            Write-Host "Trash is empty. Nothing to restore." -ForegroundColor Yellow
+            Write-Host (Get-WinOpsMessage -Key 'Restore_Empty') -ForegroundColor Yellow
             Write-Host ""
             return
         }
 
         # Display items with numbers for selection
-        Write-Host "Select item to restore (or 'q' to quit):`n" -ForegroundColor Yellow
+        Write-Host "$(Get-WinOpsMessage -Key 'Restore_SelectPrompt')`n" -ForegroundColor Yellow
 
         $index = 1
         foreach ($item in $items) {
@@ -602,32 +606,31 @@ function Restore-TrashItem {
         }
 
         Write-Host ""
-        $selection = Read-Host "Enter number"
+        $selection = Read-Host (Get-WinOpsMessage -Key 'Restore_EnterNumber')
 
         if ($selection -eq 'q' -or $selection -eq 'Q') {
-            Write-Host "Cancelled." -ForegroundColor Gray
+            Write-Host (Get-WinOpsMessage -Key 'Restore_Cancelled') -ForegroundColor Gray
             return
         }
 
         $selectedIndex = 0
         if (-not [int]::TryParse($selection, [ref]$selectedIndex) -or $selectedIndex -lt 1 -or $selectedIndex -gt $items.Count) {
-            Write-Error "Invalid selection. Please enter a number between 1 and $($items.Count)"
+            Write-Error (Get-WinOpsMessage -Key 'Restore_Invalid' -Args $items.Count)
             return
         }
 
         $selectedItem = $items[$selectedIndex - 1]
 
         Write-Host ""
-        Write-Host "Restoring: " -NoNewline
-        Write-Host $selectedItem.OriginalPath -ForegroundColor Cyan
+        Write-Host "$(Get-WinOpsMessage -Key 'Restore_Restoring' -Args $selectedItem.OriginalPath)" -ForegroundColor Cyan
 
         # Check if original location exists
         if (Test-Path $selectedItem.OriginalPath) {
             Write-Host ""
-            Write-Warning "Original location is occupied!"
-            $overwrite = Read-Host "Overwrite existing file? (y/N)"
+            Write-Warning (Get-WinOpsMessage -Key 'Restore_LocationOccupied')
+            $overwrite = Read-Host (Get-WinOpsMessage -Key 'Restore_Overwrite')
             if ($overwrite -notmatch '^[Yy]') {
-                Write-Host "Cancelled." -ForegroundColor Gray
+                Write-Host (Get-WinOpsMessage -Key 'Restore_Cancelled') -ForegroundColor Gray
                 return
             }
             $forceRestore = $true
@@ -640,13 +643,12 @@ function Restore-TrashItem {
 
         if ($result) {
             Write-Host ""
-            Write-Host "Successfully restored: " -NoNewline -ForegroundColor Green
-            Write-Host $result.RestoredPath -ForegroundColor White
+            Write-Host (Get-WinOpsMessage -Key 'Restore_Success' -Args $result.RestoredPath) -ForegroundColor Green
             Write-Host ""
         }
     }
     catch {
-        Write-Error "Failed to restore from trash: $_"
+        Write-Error (Get-WinOpsMessage -Key 'Restore_Failed' -Args $_)
         Write-Verbose $_.ScriptStackTrace
     }
 }
@@ -662,7 +664,7 @@ function Install-WinOps {
     try {
         Write-Host ""
         Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                      Install Win-Ops                                     ║" -ForegroundColor Cyan
+        Write-Host "║                      $(Get-WinOpsMessage -Key 'Install_Title')                                     ║" -ForegroundColor Cyan
         Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
         Write-Host ""
 
@@ -670,9 +672,9 @@ function Install-WinOps {
         $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
         if (-not $isAdmin) {
-            Write-Error "Administrator privileges required to install scheduled tasks."
+            Write-Error (Get-WinOpsMessage -Key 'Install_AdminRequired')
             Write-Host ""
-            Write-Host "Please run this command from an elevated PowerShell prompt:" -ForegroundColor Yellow
+            Write-Host (Get-WinOpsMessage -Key 'Install_AdminPrompt') -ForegroundColor Yellow
             Write-Host "  Start-Process pwsh -Verb RunAs -ArgumentList '-NoExit', '-Command', 'cd $PWD; .\bin\win-ops.ps1 install'" -ForegroundColor White
             Write-Host ""
             return
@@ -685,18 +687,18 @@ function Install-WinOps {
             return
         }
 
-        Write-Host "Running installation script..." -ForegroundColor Yellow
+        Write-Host (Get-WinOpsMessage -Key 'Install_Running') -ForegroundColor Yellow
         Write-Host ""
 
         # Execute install script
         & $installScript
 
         Write-Host ""
-        Write-Host "Installation complete!" -ForegroundColor Green
+        Write-Host (Get-WinOpsMessage -Key 'Install_Complete') -ForegroundColor Green
         Write-Host ""
     }
     catch {
-        Write-Error "Installation failed: $_"
+        Write-Error (Get-WinOpsMessage -Key 'Install_Failed' -Args $_)
         Write-Verbose $_.ScriptStackTrace
     }
 }
@@ -712,7 +714,7 @@ function Uninstall-WinOps {
     try {
         Write-Host ""
         Write-Host "╔══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-        Write-Host "║                     Uninstall Win-Ops                                    ║" -ForegroundColor Cyan
+        Write-Host "║                     $(Get-WinOpsMessage -Key 'Uninstall_Title')                                    ║" -ForegroundColor Cyan
         Write-Host "╚══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
         Write-Host ""
 
@@ -720,9 +722,9 @@ function Uninstall-WinOps {
         $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
         if (-not $isAdmin) {
-            Write-Error "Administrator privileges required to uninstall scheduled tasks."
+            Write-Error (Get-WinOpsMessage -Key 'Uninstall_AdminRequired')
             Write-Host ""
-            Write-Host "Please run this command from an elevated PowerShell prompt:" -ForegroundColor Yellow
+            Write-Host (Get-WinOpsMessage -Key 'Uninstall_AdminPrompt') -ForegroundColor Yellow
             Write-Host "  Start-Process pwsh -Verb RunAs -ArgumentList '-NoExit', '-Command', 'cd $PWD; .\bin\win-ops.ps1 uninstall'" -ForegroundColor White
             Write-Host ""
             return
@@ -735,18 +737,18 @@ function Uninstall-WinOps {
             return
         }
 
-        Write-Host "Running uninstallation script..." -ForegroundColor Yellow
+        Write-Host (Get-WinOpsMessage -Key 'Uninstall_Running') -ForegroundColor Yellow
         Write-Host ""
 
         # Execute uninstall script
         & $uninstallScript
 
         Write-Host ""
-        Write-Host "Uninstallation complete!" -ForegroundColor Green
+        Write-Host (Get-WinOpsMessage -Key 'Uninstall_Complete') -ForegroundColor Green
         Write-Host ""
     }
     catch {
-        Write-Error "Uninstallation failed: $_"
+        Write-Error (Get-WinOpsMessage -Key 'Uninstall_Failed' -Args $_)
         Write-Verbose $_.ScriptStackTrace
     }
 }
@@ -793,7 +795,7 @@ function Invoke-WinOps {
             Uninstall-WinOps
         }
         default {
-            Write-Error "Unknown command: $Command. Use 'help' for usage information."
+            Write-Error (Get-WinOpsMessage -Key 'Error_UnknownCommand' -Args $Command)
             exit 1
         }
     }
@@ -805,7 +807,7 @@ try {
     exit 0
 }
 catch {
-    Write-Error "An error occurred: $_"
+    Write-Error (Get-WinOpsMessage -Key 'Error_Unknown' -Args $_ -Default "An error occurred: $_")
     Write-Error $_.ScriptStackTrace
     exit 1
 }

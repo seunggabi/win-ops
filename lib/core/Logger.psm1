@@ -252,7 +252,19 @@ function Initialize-WinOpsLogger {
         New-Item -Path $logDirectory -ItemType Directory -Force | Out-Null
     }
 
-    Write-WinOpsLog -Level INFO -Message "Logger initialized at $LogPath with level $LogLevel"
+    # Import I18n if available
+    $i18nModule = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\core\I18n.psm1'
+    if ((Test-Path $i18nModule) -and -not (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue)) {
+        Import-Module $i18nModule -Force -ErrorAction SilentlyContinue
+        Initialize-WinOpsI18n -ErrorAction SilentlyContinue
+    }
+
+    $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Logger_Initialized' -Args $LogPath, $LogLevel
+    } else {
+        "Logger initialized at $LogPath with level $LogLevel"
+    }
+    Write-WinOpsLog -Level INFO -Message $msg
 }
 
 function Write-WinOpsLog {
@@ -359,7 +371,12 @@ function Set-WinOpsLogLevel {
     $oldLevel = $script:LoggerConfig.LogLevel
     $script:LoggerConfig.LogLevel = $Level
 
-    Write-WinOpsLog -Level INFO -Message "Log level changed from $oldLevel to $Level"
+    $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Logger_LevelChanged' -Args $oldLevel, $Level
+    } else {
+        "Log level changed from $oldLevel to $Level"
+    }
+    Write-WinOpsLog -Level INFO -Message $msg
 }
 
 function Get-WinOpsLogPath {
@@ -418,7 +435,12 @@ function Clear-WinOpsLogs {
     param()
 
     if (-not $script:LoggerConfig.Initialized) {
-        Write-Warning "Logger not initialized"
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Logger_NotInitialized'
+        } else {
+            "Logger not initialized"
+        }
+        Write-Warning $msg
         return
     }
 
@@ -433,7 +455,12 @@ function Clear-WinOpsLogs {
             }
         }
 
-        Write-WinOpsLog -Level INFO -Message "All log files cleared"
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Logger_Cleared'
+        } else {
+            "All log files cleared"
+        }
+        Write-WinOpsLog -Level INFO -Message $msg
     }
 }
 

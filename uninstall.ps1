@@ -48,6 +48,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Import I18n module
+$scriptRoot = $PSScriptRoot
+$i18nModule = Join-Path $scriptRoot 'lib\core\I18n.psm1'
+if (Test-Path $i18nModule) {
+    Import-Module $i18nModule -Force
+    Initialize-WinOpsI18n
+}
+
 #region Helper Functions
 
 function Write-UninstallMessage {
@@ -65,10 +73,10 @@ function Write-UninstallMessage {
     }
 
     $prefix = switch ($Type) {
-        'Info'    { '[INFO]' }
-        'Success' { '[OK]' }
-        'Warning' { '[WARN]' }
-        'Error'   { '[ERROR]' }
+        'Info'    { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Info' } else { '[INFO]' } }
+        'Success' { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Success' } else { '[OK]' } }
+        'Warning' { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Warning' } else { '[WARN]' } }
+        'Error'   { if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) { Get-WinOpsMessage -Key 'Status_Error' } else { '[ERROR]' } }
     }
 
     Write-Host "$prefix $Message" -ForegroundColor $color
@@ -86,7 +94,12 @@ function Remove-WinOpsFromPath {
     $currentPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 
     if ($currentPath -notlike "*$BinPath*") {
-        Write-UninstallMessage "Win-Ops is not in PATH" -Type Info
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'UninstallScript_NotInPath'
+        } else {
+            "Win-Ops is not in PATH"
+        }
+        Write-UninstallMessage $msg -Type Info
         return
     }
 
@@ -94,9 +107,19 @@ function Remove-WinOpsFromPath {
         $pathEntries = $currentPath -split ';' | Where-Object { $_ -notlike "*$BinPath*" }
         $newPath = $pathEntries -join ';'
         [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
-        Write-UninstallMessage "Removed from PATH: $BinPath" -Type Success
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'UninstallScript_RemovedFromPath' -Args $BinPath
+        } else {
+            "Removed from PATH: $BinPath"
+        }
+        Write-UninstallMessage $msg -Type Success
     } catch {
-        Write-UninstallMessage "Failed to remove from PATH: $_" -Type Error
+        $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'UninstallScript_RemovePathFailed' -Args $_
+        } else {
+            "Failed to remove from PATH: $_"
+        }
+        Write-UninstallMessage $msg -Type Error
         throw
     }
 }

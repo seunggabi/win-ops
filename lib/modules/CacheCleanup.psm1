@@ -29,6 +29,13 @@ Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force
 Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force
 Import-Module (Join-Path $coreModulePath 'Trash.psm1') -Force
 
+# Import I18n module
+$i18nModulePath = Join-Path $coreModulePath 'I18n.psm1'
+if ((Test-Path $i18nModulePath) -and -not (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue)) {
+    Import-Module $i18nModulePath -Force -ErrorAction SilentlyContinue
+    Initialize-WinOpsI18n -ErrorAction SilentlyContinue
+}
+
 #region Cache Locations
 
 $script:CacheLocations = @{
@@ -346,7 +353,12 @@ function Clear-WinOpsCache {
         [switch]$Force
     )
 
-    Write-WinOpsLog -Level INFO -Message "Starting cache cleanup: $CacheType (Age: $AgeInDays days)"
+    $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Cache_Starting' -Args $CacheType, $AgeInDays
+    } else {
+        "Starting cache cleanup: $CacheType (Age: $AgeInDays days)"
+    }
+    Write-WinOpsLog -Level INFO -Message $msg
 
     # Determine which caches to clean
     $cachesToClean = if ($CacheType -eq 'All') {
@@ -411,14 +423,24 @@ function Clear-WinOpsCache {
             Errors = $removeResult.Errors
         }
 
-        Write-WinOpsLog -Level INFO -Message "Cleaned $cacheKey`: Removed $($removeResult.RemovedCount) items ($([math]::Round($removeResult.RemovedSize / 1MB, 2)) MB)"
+        $cleanedMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Cache_Cleaned' -Args $cacheKey, $removeResult.RemovedCount, ([math]::Round($removeResult.RemovedSize / 1MB, 2))
+        } else {
+            "Cleaned $cacheKey`: Removed $($removeResult.RemovedCount) items ($([math]::Round($removeResult.RemovedSize / 1MB, 2)) MB)"
+        }
+        Write-WinOpsLog -Level INFO -Message $cleanedMsg
     }
 
     # Summary
     $totalRemoved = ($results | Measure-Object -Property RemovedSize -Sum).Sum
     $totalCount = ($results | Measure-Object -Property RemovedCount -Sum).Sum
 
-    Write-WinOpsLog -Level INFO -Message "Cache cleanup complete: Removed $totalCount items ($([math]::Round($totalRemoved / 1MB, 2)) MB)"
+    $completeMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Cache_Complete' -Args $totalCount, ([math]::Round($totalRemoved / 1MB, 2))
+    } else {
+        "Cache cleanup complete: Removed $totalCount items ($([math]::Round($totalRemoved / 1MB, 2)) MB)"
+    }
+    Write-WinOpsLog -Level INFO -Message $completeMsg
 
     return $results
 }
@@ -510,7 +532,12 @@ function Optimize-WinOpsIconCache {
         return $false
     }
 
-    Write-WinOpsLog -Level INFO -Message "Rebuilding icon cache"
+    $rebuildMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+        Get-WinOpsMessage -Key 'Cache_IconRebuild'
+    } else {
+        "Rebuilding icon cache"
+    }
+    Write-WinOpsLog -Level INFO -Message $rebuildMsg
 
     try {
         # Safety check: verify Explorer is not protected (should pass for Explorer restart)
@@ -519,7 +546,12 @@ function Optimize-WinOpsIconCache {
         }
 
         # Stop Explorer
-        Write-Verbose "Stopping Explorer process..."
+        $stoppingMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Cache_IconStopping'
+        } else {
+            "Stopping Explorer process..."
+        }
+        Write-Verbose $stoppingMsg
         Stop-Process -Name explorer -Force -ErrorAction Stop
         Start-Sleep -Seconds 2
 
@@ -545,14 +577,29 @@ function Optimize-WinOpsIconCache {
         }
 
         # Restart Explorer
-        Write-Verbose "Restarting Explorer..."
+        $restartingMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Cache_IconRestarting'
+        } else {
+            "Restarting Explorer..."
+        }
+        Write-Verbose $restartingMsg
         Start-Process explorer.exe
 
-        Write-WinOpsLog -Level INFO -Message "Icon cache rebuilt successfully"
+        $successMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Cache_IconSuccess'
+        } else {
+            "Icon cache rebuilt successfully"
+        }
+        Write-WinOpsLog -Level INFO -Message $successMsg
         return $true
     }
     catch {
-        Write-WinOpsLog -Level ERROR -Message "Failed to rebuild icon cache" -Exception $_
+        $failedMsg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
+            Get-WinOpsMessage -Key 'Cache_IconFailed'
+        } else {
+            "Failed to rebuild icon cache"
+        }
+        Write-WinOpsLog -Level ERROR -Message $failedMsg -Exception $_
         return $false
     }
 }
