@@ -344,7 +344,16 @@ function Start-WinOpsCleanup {
             Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Executing')" -ForegroundColor Cyan
             $results = @()
 
-            $modulesToRun = @('CacheCleanup', 'TmpCleanup', 'LogCleanup')
+            # Module name to function name mapping
+            $moduleMap = @{
+                'CacheCleanup'    = 'Clear-WinOpsCache'
+                'TmpCleanup'      = 'Clear-WinOpsTempFiles'
+                'LogCleanup'      = 'Clear-WinOpsLogFiles'
+                'MemoryCleanup'   = 'Clear-WinOpsMemory'
+                'RegistryCleanup' = 'Clear-WinOpsRegistry'
+            }
+
+            $modulesToRun = @('CacheCleanup', 'TmpCleanup', 'LogCleanup', 'MemoryCleanup', 'RegistryCleanup')
 
             foreach ($moduleName in $modulesToRun) {
                 try {
@@ -357,7 +366,7 @@ function Start-WinOpsCleanup {
 
                     Import-Module $modulePath -Force
 
-                    $functionName = "Clear-WinOps$($moduleName.Replace('Cleanup', ''))"
+                    $functionName = $moduleMap[$moduleName]
 
                     if (Get-Command $functionName -ErrorAction SilentlyContinue) {
                         Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Running' -Args $moduleName)" -ForegroundColor Gray

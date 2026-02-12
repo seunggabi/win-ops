@@ -230,5 +230,21 @@
   "Compare_Before": "Before: {0} GB",
   "Compare_After": "After: {0} GB",
   "Compare_Freed": "Freed: {0} GB ({1}%)",
-  "Compare_ItemsRemoved": "Items Removed: {0}"
+  "Compare_ItemsRemoved": "Items Removed: {0}",
+  "Memory_Starting": "Starting memory optimization...",
+  "Memory_Before": "Memory before: {0} MB used ({1}%)",
+  "Memory_After": "Memory after: {0} MB used ({1}%)",
+  "Memory_Freed": "Memory freed: {0} MB",
+  "Memory_DnsFlush": "DNS resolver cache flushed",
+  "Memory_WorkingSet": "Trimmed {0} idle process working sets",
+  "Memory_GC": ".NET garbage collection complete",
+  "Memory_Complete": "Memory optimization complete ({0} actions)",
+  "Registry_Starting": "Scanning for orphaned registry entries...",
+  "Registry_NoOrphans": "No orphaned registry entries found",
+  "Registry_Found": "Found {0} orphaned {1}",
+  "Registry_Removed": "Removed: {0}",
+  "Registry_Failed": "Failed to remove: {0}",
+  "Registry_BackupSaved": "Backups saved to: {0}",
+  "Registry_Complete": "Registry cleanup complete: {0} entries cleaned",
+  "Registry_DryRun": "Found {0} orphaned entries (dry run)"
 }

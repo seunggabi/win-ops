@@ -113,6 +113,26 @@
         "minAgeInDays": 30,
         "useTrash": true
       }
+    },
+    {
+      "name": "MemoryCleanup",
+      "enabled": true,
+      "settings": {
+        "minWorkingSetMB": 50,
+        "minIdleMinutes": 10
+      }
+    },
+    {
+      "name": "RegistryCleanup",
+      "enabled": true,
+      "settings": {
+        "backupBeforeDelete": true,
+        "cleanUninstallEntries": true,
+        "cleanSharedDLLs": true,
+        "cleanMUICache": true,
+        "cleanStartupEntries": true,
+        "cleanAppPaths": true
+      }
     }
   ],
 
