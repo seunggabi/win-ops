@@ -146,6 +146,12 @@ function Test-WinOpsPathSafe {
             # Resolve to absolute path
             $resolvedPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
 
+            # Validate that the path is actually resolvable (not malformed)
+            if ($resolvedPath -match '[<>"|?*]' -or $resolvedPath -match '::') {
+                Write-Warning "Path contains invalid characters: '$Path'"
+                return $false
+            }
+
             # In Permissive mode, only check WRP paths
             $pathsToCheck = if ($Level -eq [SafetyLevel]::Permissive) {
                 $script:WRP_PATHS
@@ -308,6 +314,13 @@ function Test-WinOpsSystemPath {
 
         try {
             $resolvedPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+
+            # Validate that the path is actually resolvable (not malformed)
+            # Fail-safe: unresolvable paths are treated as WRP
+            if ($resolvedPath -match '[<>"|?*]' -or $resolvedPath -match '::') {
+                Write-Warning "Path contains invalid characters, treating as WRP: '$Path'"
+                return $true
+            }
 
             foreach ($wrpPath in $script:WRP_PATHS) {
                 $expandedWrp = [System.Environment]::ExpandEnvironmentVariables($wrpPath)

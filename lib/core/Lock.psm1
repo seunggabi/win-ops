@@ -4,8 +4,22 @@ using namespace System.Threading
 
 # Module-level variables
 $script:LockMutex = $null
-$script:LockMetadataPath = Join-Path $env:LOCALAPPDATA "win-ops\.lock"
 $script:MutexName = "Global\WinOps"
+
+<#
+.SYNOPSIS
+    Gets the lock metadata file path.
+
+.DESCRIPTION
+    Returns the path to the lock metadata file based on current $env:LOCALAPPDATA.
+    This function ensures the path is evaluated dynamically for testability.
+
+.OUTPUTS
+    [string] The full path to the lock metadata file.
+#>
+function Get-LockMetadataPath {
+    return Join-Path $env:LOCALAPPDATA "win-ops\.lock"
+}
 
 <#
 .SYNOPSIS
@@ -83,13 +97,13 @@ function Lock-WinOps {
             }
 
             # Ensure directory exists
-            $lockDir = Split-Path -Parent $script:LockMetadataPath
+            $lockDir = Split-Path -Parent (Get-LockMetadataPath)
             if (-not (Test-Path $lockDir)) {
                 New-Item -ItemType Directory -Path $lockDir -Force | Out-Null
             }
 
             # Write metadata to file
-            $metadata | ConvertTo-Json -Depth 3 | Set-Content -Path $script:LockMetadataPath -Force
+            $metadata | ConvertTo-Json -Depth 3 | Set-Content -Path Get-LockMetadataPath -Force
 
             Write-Verbose "Lock acquired successfully (PID: $PID, Created: $createdNew)"
             return $true
@@ -99,8 +113,8 @@ function Lock-WinOps {
             $mutex.Dispose()
 
             # Show who holds the lock
-            if (Test-Path $script:LockMetadataPath) {
-                $existingLock = Get-Content $script:LockMetadataPath -Raw | ConvertFrom-Json
+            if (Test-Path Get-LockMetadataPath) {
+                $existingLock = Get-Content Get-LockMetadataPath -Raw | ConvertFrom-Json
                 Write-Warning "Lock held by PID $($existingLock.PID) on $($existingLock.Hostname) since $($existingLock.StartTime)"
             }
 
@@ -147,8 +161,8 @@ function Unlock-WinOps {
             $script:LockMutex = $null
 
             # Clean up metadata file
-            if (Test-Path $script:LockMetadataPath) {
-                Remove-Item -Path $script:LockMetadataPath -Force -ErrorAction SilentlyContinue
+            if (Test-Path Get-LockMetadataPath) {
+                Remove-Item -Path Get-LockMetadataPath -Force -ErrorAction SilentlyContinue
             }
 
             Write-Verbose "Lock released successfully"
@@ -170,8 +184,8 @@ function Unlock-WinOps {
 
         $script:LockMutex = $null
 
-        if (Test-Path $script:LockMetadataPath) {
-            Remove-Item -Path $script:LockMetadataPath -Force -ErrorAction SilentlyContinue
+        if (Test-Path Get-LockMetadataPath) {
+            Remove-Item -Path Get-LockMetadataPath -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -197,6 +211,11 @@ function Test-WinOpsLocked {
     param()
 
     try {
+        # If this process holds the lock, return true
+        if ($script:LockMutex -ne $null) {
+            return $true
+        }
+
         # Try to open existing mutex with zero timeout
         $mutex = $null
         $createdNew = $false
@@ -266,13 +285,13 @@ function Clear-WinOpsStaleLock {
     )
 
     try {
-        if (-not (Test-Path $script:LockMetadataPath)) {
+        if (-not (Test-Path Get-LockMetadataPath)) {
             Write-Verbose "No lock metadata file found"
             return $false
         }
 
         # Read existing lock metadata
-        $lockData = Get-Content $script:LockMetadataPath -Raw | ConvertFrom-Json
+        $lockData = Get-Content Get-LockMetadataPath -Raw | ConvertFrom-Json
         $lockPID = $lockData.PID
         $lockStartTime = [DateTime]::Parse($lockData.StartTime)
         $lockAge = (Get-Date) - $lockStartTime
@@ -298,7 +317,7 @@ function Clear-WinOpsStaleLock {
             Write-Warning "Clearing stale lock: $reason"
 
             # Remove metadata file
-            Remove-Item -Path $script:LockMetadataPath -Force -ErrorAction Stop
+            Remove-Item -Path Get-LockMetadataPath -Force -ErrorAction Stop
 
             # Try to acquire and release the mutex to clear it
             try {

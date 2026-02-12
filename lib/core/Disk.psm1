@@ -76,7 +76,9 @@ function ConvertTo-HumanReadableSize {
             $index++
         }
 
-        return "{0:N$Precision} {1}" -f $value, $units[$index]
+        # Use explicit rounding to avoid precision issues
+        $roundedValue = [Math]::Round($value, $Precision, [MidpointRounding]::AwayFromZero)
+        return "{0:N$Precision} {1}" -f $roundedValue, $units[$index]
     }
 }
 
@@ -259,7 +261,7 @@ function Test-WinOpsDiskSpace {
     [CmdletBinding(DefaultParameterSetName = 'Bytes')]
     [OutputType([bool])]
     param(
-        [Parameter(Mandatory, ValueFromPipelineByPropertyName)]
+        [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
         [string]$DriveLetter,
 
         [Parameter(ParameterSetName = 'Bytes')]
@@ -414,7 +416,9 @@ function Get-WinOpsLargestFiles {
                 Select-Object -First $Top
 
             foreach ($file in $largestFiles) {
-                [PSCustomObject]@{
+                if ($null -eq $file) { continue }
+
+                $result = [PSCustomObject]@{
                     FileName      = $file.Name
                     FullPath      = $file.FullName
                     Size          = if ($AsHumanReadable) { ConvertTo-HumanReadableSize $file.Length } else { $file.Length }
@@ -423,7 +427,9 @@ function Get-WinOpsLargestFiles {
                     Extension     = $file.Extension
                     IsReadOnly    = $file.IsReadOnly
                     Attributes    = $file.Attributes
-                } | Add-Member -TypeName 'WinOps.LargeFile' -PassThru
+                }
+                $result.PSObject.TypeNames.Insert(0, 'WinOps.LargeFile')
+                Write-Output $result
             }
 
             Write-Verbose "Found $($largestFiles.Count) files matching criteria"

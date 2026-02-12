@@ -323,12 +323,20 @@ Describe "Disk Module - Get-WinOpsDirectorySize" {
         }
 
         $subDir = Join-Path $script:TestDiskDir "subdir"
-        New-Item -Path $subDir -ItemType Directory | Out-Null
+        New-Item -Path $subDir -ItemType Directory -Force | Out-Null
         "subcontent" | Set-Content (Join-Path $subDir "subfile.txt")
     }
 
     AfterEach {
-        Get-ChildItem $script:TestDiskDir -Recurse | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path $script:TestDiskDir) {
+            Get-ChildItem $script:TestDiskDir -Recurse -Force |
+                Where-Object { -not $_.PSIsContainer } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+            Get-ChildItem $script:TestDiskDir -Recurse -Force |
+                Where-Object { $_.PSIsContainer } |
+                Sort-Object FullName -Descending |
+                Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     It "Calculates directory size" {

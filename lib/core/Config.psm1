@@ -84,6 +84,10 @@ function Expand-ConfigObject {
         $Object
     )
 
+    if ($null -eq $Object) {
+        return $null
+    }
+
     if ($Object -is [string]) {
         return Expand-EnvironmentVariables -Value $Object
     }
@@ -218,6 +222,11 @@ function Read-JsonConfigFile {
             $reader = [StreamReader]::new($fileStream)
             $content = $reader.ReadToEnd()
 
+            if ([string]::IsNullOrWhiteSpace($content)) {
+                Write-Verbose "Configuration file is empty: $Path"
+                return $null
+            }
+
             return $content | ConvertFrom-Json
         }
         finally {
@@ -323,6 +332,18 @@ function Initialize-WinOpsConfig {
     if ($PSCmdlet.ShouldProcess($configPath, "Initialize configuration")) {
         try {
             $defaultConfig = Read-JsonConfigFile -Path $defaultPath
+
+            if (-not $defaultConfig) {
+                Write-Error "Failed to read default configuration from: $defaultPath"
+                return
+            }
+
+            # Ensure config directory exists
+            $configDir = Split-Path -Parent $configPath
+            if (-not (Test-Path $configDir)) {
+                New-Item -Path $configDir -ItemType Directory -Force | Out-Null
+            }
+
             Write-JsonConfigFile -Path $configPath -Config $defaultConfig
 
             # Clear cache
