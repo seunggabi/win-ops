@@ -230,5 +230,21 @@
   "Compare_Before": "이전: {0} GB",
   "Compare_After": "이후: {0} GB",
   "Compare_Freed": "확보됨: {0} GB ({1}%)",
-  "Compare_ItemsRemoved": "제거된 항목: {0}"
+  "Compare_ItemsRemoved": "제거된 항목: {0}",
+  "Memory_Starting": "메모리 최적화 시작...",
+  "Memory_Before": "메모리 최적화 전: {0} MB 사용 중 ({1}%)",
+  "Memory_After": "메모리 최적화 후: {0} MB 사용 중 ({1}%)",
+  "Memory_Freed": "메모리 확보: {0} MB",
+  "Memory_DnsFlush": "DNS 확인자 캐시 플러시됨",
+  "Memory_WorkingSet": "{0}개 유휴 프로세스 작업 세트 축소",
+  "Memory_GC": ".NET 가비지 컬렉션 완료",
+  "Memory_Complete": "메모리 최적화 완료 ({0}개 작업)",
+  "Registry_Starting": "고아 레지스트리 항목 검색 중...",
+  "Registry_NoOrphans": "고아 레지스트리 항목을 찾을 수 없습니다",
+  "Registry_Found": "고아 {1} {0}개 발견",
+  "Registry_Removed": "제거됨: {0}",
+  "Registry_Failed": "제거 실패: {0}",
+  "Registry_BackupSaved": "백업 저장 위치: {0}",
+  "Registry_Complete": "레지스트리 정리 완료: {0}개 항목 정리됨",
+  "Registry_DryRun": "고아 항목 {0}개 발견 (시뮬레이션)"
 }
