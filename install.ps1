@@ -234,6 +234,7 @@ $directories = @(
     'lib\utils',
     'config',
     'scheduler',
+    'resources',
     'logs'
 )
 
@@ -283,6 +284,15 @@ try {
     Get-ChildItem -Path (Join-Path $sourcePath 'scheduler') | ForEach-Object {
         Copy-Item -Path $_.FullName -Destination (Join-Path $InstallPath 'scheduler') -Force
         Write-Verbose "Copied: scheduler\$($_.Name)"
+    }
+
+    # Copy resources (i18n language files)
+    $resourcesSource = Join-Path $sourcePath 'resources'
+    if (Test-Path $resourcesSource) {
+        Get-ChildItem -Path $resourcesSource -Filter '*.json' | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination (Join-Path $InstallPath 'resources') -Force
+            Write-Verbose "Copied: resources\$($_.Name)"
+        }
     }
 
     # Copy module manifest
