@@ -241,8 +241,9 @@ if ($pesterConfig.CodeCoverage.Enabled -and $results.CodeCoverage) {
         Write-Host "  Coverage:    " -NoNewline -ForegroundColor White
         Write-Host "$coveragePercent%" -ForegroundColor $coverageColor
 
-        if ($coveragePercent -lt $pesterConfig.CodeCoverage.CoveragePercentTarget) {
-            Write-Host "  ⚠️  Coverage below target ($($pesterConfig.CodeCoverage.CoveragePercentTarget)%)" -ForegroundColor Yellow
+        $targetPercent = [double]$pesterConfig.CodeCoverage.CoveragePercentTarget.Value
+        if ($coveragePercent -lt $targetPercent) {
+            Write-Host "  ⚠️  Coverage below target ($targetPercent%)" -ForegroundColor Yellow
         }
 
         Write-Host ""
