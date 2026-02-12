@@ -42,17 +42,23 @@ Describe "Lock Module - Lock-WinOps" {
     }
 
     It "Creates lock metadata file" {
-        $env:LOCALAPPDATA = $script:TestLockDir
-        New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
+        $originalLocalAppData = $env:LOCALAPPDATA
+        try {
+            $env:LOCALAPPDATA = $script:TestLockDir
+            New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
 
-        Lock-WinOps -TimeoutSeconds 5
+            Lock-WinOps -TimeoutSeconds 5
 
-        $metadataPath = Join-Path $script:TestLockDir "win-ops\.lock"
-        Test-Path $metadataPath | Should -Be $true
+            $metadataPath = Join-Path $script:TestLockDir "win-ops\.lock"
+            Test-Path $metadataPath | Should -Be $true
 
-        $metadata = Get-Content $metadataPath -Raw | ConvertFrom-Json
-        $metadata.PID | Should -Be $PID
-        $metadata.Hostname | Should -Not -BeNullOrEmpty
+            $metadata = Get-Content $metadataPath -Raw | ConvertFrom-Json
+            $metadata.PID | Should -Be $PID
+            $metadata.Hostname | Should -Not -BeNullOrEmpty
+        }
+        finally {
+            $env:LOCALAPPDATA = $originalLocalAppData
+        }
     }
 
     It "Returns true if lock already held by same process" {
@@ -61,18 +67,24 @@ Describe "Lock Module - Lock-WinOps" {
     }
 
     It "Stores process metadata in lock file" {
-        $env:LOCALAPPDATA = $script:TestLockDir
-        New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
+        $originalLocalAppData = $env:LOCALAPPDATA
+        try {
+            $env:LOCALAPPDATA = $script:TestLockDir
+            New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
 
-        Lock-WinOps -TimeoutSeconds 5
+            Lock-WinOps -TimeoutSeconds 5
 
-        $metadataPath = Join-Path $script:TestLockDir "win-ops\.lock"
-        $metadata = Get-Content $metadataPath -Raw | ConvertFrom-Json
+            $metadataPath = Join-Path $script:TestLockDir "win-ops\.lock"
+            $metadata = Get-Content $metadataPath -Raw | ConvertFrom-Json
 
-        $metadata.PID | Should -Be $PID
-        $metadata.StartTime | Should -Not -BeNullOrEmpty
-        $metadata.Hostname | Should -Be $env:COMPUTERNAME
-        $metadata.Process | Should -Not -BeNullOrEmpty
+            $metadata.PID | Should -Be $PID
+            $metadata.StartTime | Should -Not -BeNullOrEmpty
+            $metadata.Hostname | Should -Be $env:COMPUTERNAME
+            $metadata.Process | Should -Not -BeNullOrEmpty
+        }
+        finally {
+            $env:LOCALAPPDATA = $originalLocalAppData
+        }
     }
 
     It "Accepts custom timeout" {
@@ -95,15 +107,21 @@ Describe "Lock Module - Unlock-WinOps" {
     }
 
     It "Removes metadata file on unlock" {
-        $env:LOCALAPPDATA = $script:TestLockDir
-        New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
+        $originalLocalAppData = $env:LOCALAPPDATA
+        try {
+            $env:LOCALAPPDATA = $script:TestLockDir
+            New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
 
-        Lock-WinOps -TimeoutSeconds 5
-        $metadataPath = Join-Path $script:TestLockDir "win-ops\.lock"
+            Lock-WinOps -TimeoutSeconds 5
+            $metadataPath = Join-Path $script:TestLockDir "win-ops\.lock"
 
-        Unlock-WinOps
+            Unlock-WinOps
 
-        Test-Path $metadataPath | Should -Be $false
+            Test-Path $metadataPath | Should -Be $false
+        }
+        finally {
+            $env:LOCALAPPDATA = $originalLocalAppData
+        }
     }
 
     It "Does not error when unlocking without lock" {

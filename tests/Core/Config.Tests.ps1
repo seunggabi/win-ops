@@ -338,8 +338,8 @@ Describe "Config Module - Get-WinOpsConfig" {
     }
 
     It "Returns full configuration without key" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         $config = Get-WinOpsConfig
         $config | Should -Not -BeNullOrEmpty
@@ -347,16 +347,16 @@ Describe "Config Module - Get-WinOpsConfig" {
     }
 
     It "Returns specific value for dot-notation key" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         $value = Get-WinOpsConfig -Key "cleanup.max_threads"
         $value | Should -Be 4
     }
 
     It "Returns nested object for partial key path" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         $cleanup = Get-WinOpsConfig -Key "cleanup"
         $cleanup.max_threads | Should -Be 4
@@ -364,16 +364,16 @@ Describe "Config Module - Get-WinOpsConfig" {
     }
 
     It "Returns null and warns for non-existent key" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         $result = Get-WinOpsConfig -Key "nonexistent.key" -WarningAction SilentlyContinue
         $result | Should -BeNullOrEmpty
     }
 
     It "Expands environment variables in returned values" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         $path = Get-WinOpsConfig -Key "trash.path"
         $path | Should -Not -Match "%"
@@ -395,8 +395,8 @@ Describe "Config Module - Initialize-WinOpsConfig" {
     }
 
     It "Creates config file from default" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         Initialize-WinOpsConfig -Confirm:$false
 
@@ -404,8 +404,8 @@ Describe "Config Module - Initialize-WinOpsConfig" {
     }
 
     It "Does not overwrite existing config without Force" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         @{ existing = "preserved" } | ConvertTo-Json | Set-Content (Join-Path $script:TestConfigDir "config.json")
 
@@ -416,8 +416,8 @@ Describe "Config Module - Initialize-WinOpsConfig" {
     }
 
     It "Overwrites existing config with Force" {
-        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" }
-        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" }
+        Mock Get-ConfigPath { Join-Path $script:TestConfigDir "config.json" } -ModuleName Config
+        Mock Get-DefaultConfigPath { Join-Path $script:TestConfigDir "config\default.json" } -ModuleName Config
 
         @{ existing = "old" } | ConvertTo-Json | Set-Content (Join-Path $script:TestConfigDir "config.json")
 

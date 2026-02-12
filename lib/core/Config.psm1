@@ -225,7 +225,7 @@ function Read-JsonConfigFile {
 
             if ([string]::IsNullOrWhiteSpace($content)) {
                 Write-Verbose "Configuration file is empty: $Path"
-                return $null
+                return [PSCustomObject]@{}
             }
 
             return $content | ConvertFrom-Json

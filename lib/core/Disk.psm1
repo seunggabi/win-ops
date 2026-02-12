@@ -76,8 +76,10 @@ function ConvertTo-HumanReadableSize {
             $index++
         }
 
-        # Use standard formatting with precision
-        return "{0:N$Precision} {1}" -f $value, $units[$index]
+        # Truncate to specified precision (no rounding up)
+        $multiplier = [Math]::Pow(10, $Precision)
+        $truncatedValue = [Math]::Truncate($value * $multiplier) / $multiplier
+        return "{0:N$Precision} {1}" -f $truncatedValue, $units[$index]
     }
 }
 
@@ -391,7 +393,7 @@ function Get-WinOpsLargestFiles {
 
             # Get all files recursively
             $getChildItemParams = @{
-                Path        = $Path
+                LiteralPath = $Path
                 File        = $true
                 Recurse     = $true
                 Force       = -not $ExcludeSystemFiles
@@ -495,7 +497,7 @@ function Get-WinOpsDirectorySize {
             Write-Verbose "Calculating size for: $Path"
 
             $getChildItemParams = @{
-                Path        = $Path
+                LiteralPath = $Path
                 Recurse     = $true
                 File        = $true
                 Force       = -not $ExcludeSystemFiles
@@ -522,9 +524,9 @@ function Get-WinOpsDirectorySize {
             }
 
             if ($IncludeSubdirectories) {
-                $subdirs = Get-ChildItem -Path $Path -Directory -Force:(-not $ExcludeSystemFiles) -ErrorAction SilentlyContinue
+                $subdirs = Get-ChildItem -LiteralPath $Path -Directory -Force:(-not $ExcludeSystemFiles) -ErrorAction SilentlyContinue
                 $subdirInfo = foreach ($subdir in $subdirs) {
-                    $subdirFiles = @(Get-ChildItem -Path $subdir.FullName -Recurse -File -Force:(-not $ExcludeSystemFiles) -ErrorAction SilentlyContinue)
+                    $subdirFiles = @(Get-ChildItem -LiteralPath $subdir.FullName -Recurse -File -Force:(-not $ExcludeSystemFiles) -ErrorAction SilentlyContinue)
                     if ($ExcludeSystemFiles) {
                         $subdirFiles = $subdirFiles | Where-Object { -not ($_.Attributes -match 'Hidden|System') }
                     }
