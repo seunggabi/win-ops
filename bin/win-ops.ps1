@@ -366,6 +366,10 @@ function Start-WinOpsCleanup {
                 'OrphanAppCleanup'
             )
 
+            # Suppress confirmation prompts for all modules (already confirmed at top level)
+            $savedConfirmPreference = $ConfirmPreference
+            $ConfirmPreference = 'None'
+
             foreach ($moduleName in $modulesToRun) {
                 try {
                     $modulePath = Join-Path $script:ScriptRoot "lib\modules\$moduleName.psm1"
@@ -396,6 +400,8 @@ function Start-WinOpsCleanup {
                     Write-Warning (Get-WinOpsMessage -Key 'Cleanup_ModuleFailed' -Args $moduleName, $_)
                 }
             }
+
+            $ConfirmPreference = $savedConfirmPreference
 
             # Display summary
             Write-Host "`n=== Cleanup Summary ===" -ForegroundColor Cyan
