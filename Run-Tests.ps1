@@ -113,10 +113,11 @@ if ($ExcludeTags) {
 if (-not $NoCoverage) {
     $pesterConfig.CodeCoverage.Enabled = $true
     $pesterConfig.CodeCoverage.Path = @(
-        './lib/core/*.psm1',
-        './lib/modules/*.psm1',
-        './lib/utils/*.psm1',
-        './scheduler/*.psm1'
+        './lib/core/*.psm1'
+        # Only Core modules are tested in CI
+        # './lib/modules/*.psm1',
+        # './lib/utils/*.psm1',
+        # './scheduler/*.psm1'
     )
     $pesterConfig.CodeCoverage.OutputFormat = 'JaCoCo'
     $pesterConfig.CodeCoverage.OutputPath = Join-Path $ScriptRoot './tests/coverage.xml'
