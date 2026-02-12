@@ -762,8 +762,7 @@ function Invoke-WinOps {
     param(
         [string]$Command,
         [switch]$DryRun,
-        [switch]$Force,
-        [switch]$Verbose
+        [switch]$Force
     )
 
     switch ($Command.ToLower()) {

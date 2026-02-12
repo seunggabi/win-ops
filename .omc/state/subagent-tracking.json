@@ -341,10 +341,19 @@
       "status": "failed",
       "completed_at": "2026-02-12T02:58:02.589Z",
       "duration_ms": 735815
+    },
+    {
+      "agent_id": "af1356d",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-02-12T03:26:27.452Z",
+      "parent_mode": "none",
+      "status": "failed",
+      "completed_at": "2026-02-12T03:27:12.568Z",
+      "duration_ms": 45116
     }
   ],
-  "total_spawned": 38,
+  "total_spawned": 39,
   "total_completed": 0,
-  "total_failed": 38,
-  "last_updated": "2026-02-12T02:58:02.589Z"
+  "total_failed": 39,
+  "last_updated": "2026-02-12T03:27:12.569Z"
 }

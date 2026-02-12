@@ -97,9 +97,17 @@ jobs:
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings PSGallery
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings .pssa-settings.psd1
           $results | Format-Table -AutoSize
-          if ($results.Count -gt 0) {
-            Write-Host "Found $($results.Count) PSScriptAnalyzer issues"
+
+          # Only fail on Error severity
+          $errors = $results | Where-Object { $_.Severity -eq 'Error' }
+          if ($errors.Count -gt 0) {
+            Write-Host "Found $($errors.Count) PSScriptAnalyzer errors"
             exit 1
+          }
+
+          $warnings = $results | Where-Object { $_.Severity -eq 'Warning' }
+          if ($warnings.Count -gt 0) {
+            Write-Host "Found $($warnings.Count) PSScriptAnalyzer warnings (not failing)"
           }

@@ -110,7 +110,7 @@ function Lock-WinOps {
     catch {
         Write-Error "Failed to acquire lock: $_"
         if ($script:LockMutex) {
-            try { $script:LockMutex.Dispose() } catch { }
+            try { $script:LockMutex.Dispose() } catch { <# Intentionally silent - cleanup on error path #> }
             $script:LockMutex = $null
         }
         return $false
@@ -166,7 +166,7 @@ function Unlock-WinOps {
                 $script:LockMutex.Dispose()
             }
         }
-        catch { }
+        catch { <# Intentionally silent - best effort cleanup #> }
 
         $script:LockMutex = $null
 
@@ -347,7 +347,7 @@ $ExecutionContext.SessionState.Module.OnRemove = {
             $script:LockMutex.ReleaseMutex()
             $script:LockMutex.Dispose()
         }
-        catch { }
+        catch { <# Intentionally silent - module cleanup, can't report errors #> }
         $script:LockMutex = $null
     }
 }
