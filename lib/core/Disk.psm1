@@ -396,11 +396,11 @@ function Get-WinOpsLargestFiles {
                 LiteralPath = $Path
                 File        = $true
                 Recurse     = $true
-                Force       = -not $ExcludeSystemFiles
+                Force       = (-not $ExcludeSystemFiles)
                 ErrorAction = 'SilentlyContinue'
             }
 
-            $files = Get-ChildItem @getChildItemParams
+            $files = @(Get-ChildItem @getChildItemParams)
 
             # Apply filters
             if ($ExcludeSystemFiles) {
@@ -500,7 +500,7 @@ function Get-WinOpsDirectorySize {
                 LiteralPath = $Path
                 Recurse     = $true
                 File        = $true
-                Force       = -not $ExcludeSystemFiles
+                Force       = (-not $ExcludeSystemFiles)
                 ErrorAction = 'SilentlyContinue'
             }
 
@@ -524,7 +524,7 @@ function Get-WinOpsDirectorySize {
             }
 
             if ($IncludeSubdirectories) {
-                $subdirs = Get-ChildItem -LiteralPath $Path -Directory -Force:(-not $ExcludeSystemFiles) -ErrorAction SilentlyContinue
+                $subdirs = @(Get-ChildItem -LiteralPath $Path -Directory -Force:(-not $ExcludeSystemFiles) -ErrorAction SilentlyContinue)
                 $subdirInfo = foreach ($subdir in $subdirs) {
                     $subdirFiles = @(Get-ChildItem -LiteralPath $subdir.FullName -Recurse -File -Force:(-not $ExcludeSystemFiles) -ErrorAction SilentlyContinue)
                     if ($ExcludeSystemFiles) {

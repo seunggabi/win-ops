@@ -8,6 +8,9 @@ BeforeAll {
     # Setup test environment
     $script:TestLockDir = Join-Path $env:TEMP "WinOpsLockTests_$([guid]::NewGuid().ToString('N'))"
     $script:OriginalLocalAppData = $env:LOCALAPPDATA
+
+    # Ensure absolutely no locks are held
+    try { Unlock-WinOps } catch { }
 }
 
 AfterAll {
@@ -44,6 +47,9 @@ Describe "Lock Module - Lock-WinOps" {
     It "Creates lock metadata file" {
         $originalLocalAppData = $env:LOCALAPPDATA
         try {
+            # Ensure clean state for this test
+            try { Unlock-WinOps } catch { }
+
             $env:LOCALAPPDATA = $script:TestLockDir
             New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
 
@@ -57,6 +63,7 @@ Describe "Lock Module - Lock-WinOps" {
             $metadata.Hostname | Should -Not -BeNullOrEmpty
         }
         finally {
+            try { Unlock-WinOps } catch { }
             $env:LOCALAPPDATA = $originalLocalAppData
         }
     }
@@ -69,6 +76,9 @@ Describe "Lock Module - Lock-WinOps" {
     It "Stores process metadata in lock file" {
         $originalLocalAppData = $env:LOCALAPPDATA
         try {
+            # Ensure clean state for this test
+            try { Unlock-WinOps } catch { }
+
             $env:LOCALAPPDATA = $script:TestLockDir
             New-Item -Path $script:TestLockDir -ItemType Directory -Force | Out-Null
 
@@ -83,6 +93,7 @@ Describe "Lock Module - Lock-WinOps" {
             $metadata.Process | Should -Not -BeNullOrEmpty
         }
         finally {
+            try { Unlock-WinOps } catch { }
             $env:LOCALAPPDATA = $originalLocalAppData
         }
     }

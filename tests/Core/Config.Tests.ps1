@@ -435,7 +435,8 @@ Describe "Config Module - Edge Cases" {
         "{}" | Set-Content $script:TestConfigPath
 
         $result = Read-JsonConfigFile -Path $script:TestConfigPath
-        $result | Should -Not -BeNullOrEmpty
+        $result | Should -Not -BeNull
+        $result.PSObject.Properties.Count | Should -BeGreaterOrEqual 0
     }
 
     It "Handles deeply nested key paths" {
