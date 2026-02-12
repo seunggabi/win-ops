@@ -110,7 +110,7 @@ $pesterConfig = New-PesterConfiguration
 
 # Run settings
 $pesterConfig.Run.Path = if ($Path) { $Path } else { $configData.Run.Path }
-$pesterConfig.Run.Exit = $CI
+$pesterConfig.Run.Exit = $CI.IsPresent
 $pesterConfig.Run.PassThru = $true
 
 # Filter settings
