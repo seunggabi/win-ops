@@ -60,15 +60,9 @@ jobs:
         run: |
           if (Test-Path tests/coverage.xml) {
             Write-Host "Coverage report generated at tests/coverage.xml"
-            # Parse and display coverage percentage
-            [xml]$coverage = Get-Content tests/coverage.xml
-            if ($coverage.report) {
-              $linesCovered = [int]$coverage.report.counter | Where-Object { $_.type -eq 'LINE' } | Select-Object -ExpandProperty covered
-              $linesTotal = [int]$coverage.report.counter | Where-Object { $_.type -eq 'LINE' } | Select-Object -ExpandProperty missed
-              $linesTotal += $linesCovered
-              $percent = [math]::Round(($linesCovered / $linesTotal) * 100, 2)
-              Write-Host "Code Coverage: $percent% ($linesCovered / $linesTotal lines)"
-            }
+            # Coverage report is generated in JaCoCo XML format by Pester
+            # The Run-Tests.ps1 script handles coverage reporting and validation
+            Write-Host "Code coverage analysis completed by Pester"
           }
 
   lint:

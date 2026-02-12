@@ -226,9 +226,9 @@ if ($pesterConfig.CodeCoverage.Enabled -and $results.CodeCoverage) {
     Write-Host "───────────────────────────────────────────────────────────" -ForegroundColor Cyan
 
     $coverage = $results.CodeCoverage
-    $commandsAnalyzed = $coverage.NumberOfCommandsAnalyzed
-    $commandsExecuted = $coverage.NumberOfCommandsExecuted
-    $commandsMissed = $coverage.NumberOfCommandsMissed
+    $commandsAnalyzed = $coverage.CommandsAnalyzedCount
+    $commandsExecuted = $coverage.CommandsExecutedCount
+    $commandsMissed = $coverage.CommandsMissedCount
 
     if ($commandsAnalyzed -gt 0) {
         $coveragePercent = [math]::Round(($commandsExecuted / $commandsAnalyzed) * 100, 2)
@@ -241,8 +241,8 @@ if ($pesterConfig.CodeCoverage.Enabled -and $results.CodeCoverage) {
         Write-Host "  Coverage:    " -NoNewline -ForegroundColor White
         Write-Host "$coveragePercent%" -ForegroundColor $coverageColor
 
-        if ($coveragePercent -lt $configData.CodeCoverage.CoveragePercentTarget) {
-            Write-Host "  ⚠️  Coverage below target ($($configData.CodeCoverage.CoveragePercentTarget)%)" -ForegroundColor Yellow
+        if ($coveragePercent -lt $pesterConfig.CodeCoverage.CoveragePercentTarget) {
+            Write-Host "  ⚠️  Coverage below target ($($pesterConfig.CodeCoverage.CoveragePercentTarget)%)" -ForegroundColor Yellow
         }
 
         Write-Host ""
