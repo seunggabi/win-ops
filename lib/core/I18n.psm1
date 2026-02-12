@@ -64,7 +64,7 @@ function Load-LanguageResources {
         [string]$Language
     )
 
-    $resourceFile = Join-Path $script:I18nConfig.ResourcesPath "$Language.psd1"
+    $resourceFile = Join-Path $script:I18nConfig.ResourcesPath "$Language.json"
 
     if (-not (Test-Path $resourceFile)) {
         Write-Verbose "Resource file not found: $resourceFile"
@@ -72,7 +72,8 @@ function Load-LanguageResources {
     }
 
     try {
-        $data = Import-PowerShellDataFile -Path $resourceFile -ErrorAction Stop
+        $jsonContent = Get-Content -Path $resourceFile -Raw -ErrorAction Stop
+        $data = $jsonContent | ConvertFrom-Json -AsHashtable -ErrorAction Stop
         Write-Verbose "Loaded language resources: $Language ($($data.Count) messages)"
         return $data
     }

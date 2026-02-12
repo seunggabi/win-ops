@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"gh run watch --repo seunggabi/win-ops\",\"timeout\":120000,\"description\":\"Watch GitHub Actions run\"}",
-  "error": "Exit code 1\nrun ID required when not running interactively\n\nUsage:  gh run watch <run-id> [flags]\n\nFlags:\n      --compact        Show only relevant/failed steps\n      --exit-status    Exit with non-zero status if run fails\n  -i, --interval int   Refresh interval in seconds (default 3)",
-  "timestamp": "2026-02-12T03:27:23.538Z",
-  "retry_count": 3
+  "tool_input_preview": "{\"command\":\"cd /Users/seunggabi/seunggabi/project/n8n/win-ops/resources && pwsh -Command \\\"\\n\\\\$data = @{\\n    CLI_Help_Title = 'Windows Operations Manager'\\n    CLI_Help_Usage = 'USAGE:'\\n}\\n\\\\$data ...",
+  "error": "Exit code 127\n(eval):1: command not found: pwsh",
+  "timestamp": "2026-02-12T04:15:42.618Z",
+  "retry_count": 1
 }
