@@ -15,6 +15,27 @@ $script:I18nConfig = @{
 
 #region Private Functions
 
+function ConvertTo-HashtableFromJson {
+    <#
+    .SYNOPSIS
+        Converts a JSON string to a hashtable (PS 5.1 compatible).
+    #>
+    [CmdletBinding()]
+    [OutputType([hashtable])]
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [string]$JsonString
+    )
+    process {
+        $obj = $JsonString | ConvertFrom-Json
+        $hash = @{}
+        $obj.PSObject.Properties | ForEach-Object {
+            $hash[$_.Name] = $_.Value
+        }
+        return $hash
+    }
+}
+
 function Get-SystemLanguage {
     <#
     .SYNOPSIS
@@ -72,8 +93,12 @@ function Load-LanguageResources {
     }
 
     try {
-        $jsonContent = Get-Content -Path $resourceFile -Raw -ErrorAction Stop
-        $data = $jsonContent | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+        $jsonContent = Get-Content -Path $resourceFile -Raw -Encoding UTF8 -ErrorAction Stop
+        $obj = ConvertFrom-Json -InputObject $jsonContent -ErrorAction Stop
+        $data = @{}
+        foreach ($prop in $obj.PSObject.Properties) {
+            $data[$prop.Name] = $prop.Value
+        }
         Write-Verbose "Loaded language resources: $Language ($($data.Count) messages)"
         return $data
     }

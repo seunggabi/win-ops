@@ -185,7 +185,7 @@ if ($Coverage -and $results.CodeCoverage) {
 if ($results.FailedCount -gt 0) {
     Write-Host "`n=== Failed Tests ===" -ForegroundColor Red
     foreach ($test in $results.Failed) {
-        Write-Host "`n❌ $($test.ExpandedName)" -ForegroundColor Red
+        Write-Host "`n[FAIL] $($test.ExpandedName)" -ForegroundColor Red
         Write-Host "   Location: $($test.ScriptBlock.File):$($test.ScriptBlock.StartPosition.StartLine)" -ForegroundColor Gray
         if ($test.ErrorRecord) {
             Write-Host "   Error: $($test.ErrorRecord.Exception.Message)" -ForegroundColor Red

@@ -167,9 +167,9 @@ function Add-WinOpsToPath {
 #region Installation Steps
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║      Win-Ops Installation Script      ║" -ForegroundColor Cyan
-Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "+========================================+" -ForegroundColor Cyan
+Write-Host "|      Win-Ops Installation Script      |" -ForegroundColor Cyan
+Write-Host "+========================================+" -ForegroundColor Cyan
 Write-Host ""
 
 # Step 1: Check PowerShell version
@@ -344,9 +344,9 @@ if ($InstallScheduledTask) {
 #region Summary
 
 Write-Host ""
-Write-Host "╔════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║     Installation Complete! ✓          ║" -ForegroundColor Green
-Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "+========================================+" -ForegroundColor Green
+Write-Host "|     Installation Complete!            |" -ForegroundColor Green
+Write-Host "+========================================+" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "Installation Summary:" -ForegroundColor Cyan

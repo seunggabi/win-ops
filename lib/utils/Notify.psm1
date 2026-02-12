@@ -240,9 +240,9 @@ function Send-FallbackNotification {
 
     # Final fallback: console output only
     $symbol = switch ($Type) {
-        'Success' { '[✓]' }
+        'Success' { '[OK]' }
         'Warning' { '[!]' }
-        'Error'   { '[✗]' }
+        'Error'   { '[FAIL]' }
         'Info'    { '[i]' }
     }
 

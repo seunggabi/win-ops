@@ -28,7 +28,7 @@ function Write-Check {
         [bool]$Success
     )
 
-    $icon = if ($Success) { '✓' } else { '✗' }
+    $icon = if ($Success) { 'OK' } else { 'FAIL' }
     $color = if ($Success) { $SuccessColor } else { $ErrorColor }
 
     Write-Host "$icon " -ForegroundColor $color -NoNewline
@@ -37,14 +37,14 @@ function Write-Check {
 
 function Write-Info {
     param([string]$Message)
-    Write-Host "ℹ " -ForegroundColor $InfoColor -NoNewline
+    Write-Host "[INFO] " -ForegroundColor $InfoColor -NoNewline
     Write-Host $Message
 }
 
 Write-Host ""
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║         Win-Ops i18n Implementation Verification         ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "+===========================================================+" -ForegroundColor Cyan
+Write-Host "|         Win-Ops i18n Implementation Verification         |" -ForegroundColor Cyan
+Write-Host "+===========================================================+" -ForegroundColor Cyan
 Write-Host ""
 
 $projectRoot = Split-Path $PSScriptRoot -Parent
@@ -263,9 +263,9 @@ if ($exists) { $passed++ } else { $failed++ }
 
 # Summary
 Write-Host ""
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host "VERIFICATION SUMMARY" -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host ""
 
 $total = $passed + $failed
@@ -281,9 +281,9 @@ Write-Host "$percentage%" -ForegroundColor $(if ($percentage -eq 100) { $Success
 Write-Host ""
 
 if ($failed -eq 0) {
-    Write-Host "✓ All checks passed! i18n implementation is complete." -ForegroundColor $SuccessColor
+    Write-Host "OK All checks passed! i18n implementation is complete." -ForegroundColor $SuccessColor
     exit 0
 } else {
-    Write-Host "✗ Some checks failed. Please review the errors above." -ForegroundColor $ErrorColor
+    Write-Host "FAIL Some checks failed. Please review the errors above." -ForegroundColor $ErrorColor
     exit 1
 }

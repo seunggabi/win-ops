@@ -67,12 +67,12 @@ if (-not $ScriptRoot) {
 }
 
 # Import Pester
-Write-Host "🔍 Checking Pester installation..." -ForegroundColor Cyan
+Write-Host "[SEARCH] Checking Pester installation..." -ForegroundColor Cyan
 
 $pesterModule = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
 
 if (-not $pesterModule) {
-    Write-Host "❌ Pester not found. Installing Pester 5.x..." -ForegroundColor Yellow
+    Write-Host "[FAIL] Pester not found. Installing Pester 5.x..." -ForegroundColor Yellow
     Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck -Scope CurrentUser
     $pesterModule = Get-Module -ListAvailable -Name Pester | Sort-Object Version -Descending | Select-Object -First 1
 }
@@ -85,13 +85,13 @@ if ($pesterModule.Version.Major -lt 5) {
 
 Import-Module Pester -MinimumVersion 5.0.0 -ErrorAction Stop
 
-Write-Host "✅ Using Pester $($pesterModule.Version)" -ForegroundColor Green
+Write-Host "[OK] Using Pester $($pesterModule.Version)" -ForegroundColor Green
 
 #endregion
 
 #region Build Configuration
 
-Write-Host "📋 Building Pester configuration..." -ForegroundColor Cyan
+Write-Host "[LIST] Building Pester configuration..." -ForegroundColor Cyan
 
 $pesterConfig = New-PesterConfiguration
 
@@ -148,7 +148,7 @@ else {
 # Parallel execution
 if ($Parallel) {
     $pesterConfig.Run.Container = New-PesterContainer -Path $pesterConfig.Run.Path
-    Write-Host "⚡ Parallel execution enabled (experimental)" -ForegroundColor Cyan
+    Write-Host "* Parallel execution enabled (experimental)" -ForegroundColor Cyan
 }
 
 # Should settings
@@ -162,8 +162,8 @@ $pesterConfig.TestDrive.Enabled = $true
 #region Execute Tests
 
 Write-Host ""
-Write-Host "🧪 Running win-ops Tests" -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "[TEST] Running win-ops Tests" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host "  Path:        $($pesterConfig.Run.Path)" -ForegroundColor White
 Write-Host "  Coverage:    $(if ($pesterConfig.CodeCoverage.Enabled) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
 Write-Host "  Parallel:    $(if ($Parallel) { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
@@ -173,7 +173,7 @@ if ($Tags) {
 if ($ExcludeTags) {
     Write-Host "  Exclude:     $($ExcludeTags -join ', ')" -ForegroundColor White
 }
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host ""
 
 $startTime = Get-Date
@@ -182,7 +182,7 @@ try {
     $results = Invoke-Pester -Configuration $pesterConfig
 }
 catch {
-    Write-Host "❌ Test execution failed: $_" -ForegroundColor Red
+    Write-Host "[FAIL] Test execution failed: $_" -ForegroundColor Red
     exit 1
 }
 
@@ -193,8 +193,8 @@ $duration = (Get-Date) - $startTime
 #region Report Results
 
 Write-Host ""
-Write-Host "📊 Test Results Summary" -ForegroundColor Cyan
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "[STATS] Test Results Summary" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 
 # Test statistics
 $totalTests = $results.TotalCount
@@ -222,8 +222,8 @@ Write-Host "  Duration:    $($duration.TotalSeconds.ToString('F2')) seconds" -Fo
 # Code coverage
 if ($pesterConfig.CodeCoverage.Enabled -and $results.CodeCoverage) {
     Write-Host ""
-    Write-Host "📈 Code Coverage" -ForegroundColor Cyan
-    Write-Host "───────────────────────────────────────────────────────────" -ForegroundColor Cyan
+    Write-Host "[COV] Code Coverage" -ForegroundColor Cyan
+    Write-Host "-----------------------------------------------------------" -ForegroundColor Cyan
 
     $coverage = $results.CodeCoverage
     $commandsAnalyzed = $coverage.CommandsAnalyzedCount
@@ -243,7 +243,7 @@ if ($pesterConfig.CodeCoverage.Enabled -and $results.CodeCoverage) {
 
         $targetPercent = [double]$pesterConfig.CodeCoverage.CoveragePercentTarget.Value
         if ($coveragePercent -lt $targetPercent) {
-            Write-Host "  ⚠️  Coverage below target ($targetPercent%)" -ForegroundColor Yellow
+            Write-Host "  [WARN]  Coverage below target ($targetPercent%)" -ForegroundColor Yellow
         }
 
         Write-Host ""
@@ -256,7 +256,7 @@ if ($pesterConfig.TestResult.Enabled) {
     Write-Host "  Test results:    $($pesterConfig.TestResult.OutputPath)" -ForegroundColor Gray
 }
 
-Write-Host "═══════════════════════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "===========================================================" -ForegroundColor Cyan
 
 #endregion
 
@@ -264,11 +264,11 @@ Write-Host "══════════════════════�
 
 if ($failedTests -gt 0) {
     Write-Host ""
-    Write-Host "❌ Failed Tests" -ForegroundColor Red
-    Write-Host "───────────────────────────────────────────────────────────" -ForegroundColor Red
+    Write-Host "[FAIL] Failed Tests" -ForegroundColor Red
+    Write-Host "-----------------------------------------------------------" -ForegroundColor Red
 
     foreach ($test in $results.Failed) {
-        Write-Host "  • $($test.ExpandedName)" -ForegroundColor Red
+        Write-Host "  * $($test.ExpandedName)" -ForegroundColor Red
         if ($test.ErrorRecord) {
             Write-Host "    $($test.ErrorRecord.Exception.Message)" -ForegroundColor Gray
         }
@@ -286,11 +286,11 @@ if ($PassThru) {
 }
 
 if ($failedTests -gt 0) {
-    Write-Host "❌ Tests FAILED" -ForegroundColor Red
+    Write-Host "[FAIL] Tests FAILED" -ForegroundColor Red
     exit 1
 }
 else {
-    Write-Host "✅ All tests PASSED" -ForegroundColor Green
+    Write-Host "[OK] All tests PASSED" -ForegroundColor Green
     exit 0
 }
 

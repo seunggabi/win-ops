@@ -274,7 +274,7 @@ Describe "E2E: Analyze Flow" {
                 }
             }
 
-            # Total should be approximately 50MB + 100KB + 20MB + 5MB ≈ 75MB
+            # Total should be approximately 50MB + 100KB + 20MB + 5MB ~ 75MB
             $report.TotalSize | Should -BeGreaterThan 70MB
             $report.TotalSize | Should -BeLessThan 80MB
 

@@ -19,9 +19,9 @@
 
 # Import required core modules (skip if already loaded to avoid scope conflicts)
 $coreModulePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\core'
-if (-not (Get-Module -Name Config)) { Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force }
-if (-not (Get-Module -Name Logger)) { Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force }
-if (-not (Get-Module -Name Safety)) { Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force }
+if (-not (Get-Module -Name Config)) { Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force -Global }
+if (-not (Get-Module -Name Logger)) { Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force -Global }
+if (-not (Get-Module -Name Safety)) { Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force -Global }
 
 #region Private Functions
 
@@ -305,14 +305,19 @@ function Find-WinOpsZombieProcess {
                 continue
             }
 
+            $startTime = try { $process.StartTime } catch { $null }
+            $cpuPercent = if ($IncludeHighCPU) { Get-ProcessCPUUsage -Process $process } else { 0 }
+            $memoryMB = Get-ProcessMemoryUsageMB -Process $process
+            $responding = Test-ProcessResponding -Process $process
+
             $zombieProcesses += [PSCustomObject]@{
                 ProcessId = $process.Id
                 ProcessName = $process.ProcessName
                 MainWindowTitle = $process.MainWindowTitle
-                StartTime = try { $process.StartTime } catch { $null }
-                CPUPercent = if ($IncludeHighCPU) { Get-ProcessCPUUsage -Process $process } else { 0 }
-                MemoryMB = Get-ProcessMemoryUsageMB -Process $process
-                Responding = Test-ProcessResponding -Process $process
+                StartTime = $startTime
+                CPUPercent = $cpuPercent
+                MemoryMB = $memoryMB
+                Responding = $responding
                 Reasons = $candidate.Reasons -join ", "
             }
         }

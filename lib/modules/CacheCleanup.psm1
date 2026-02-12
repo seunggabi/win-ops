@@ -24,15 +24,15 @@ using namespace System.IO
 
 # Import required core modules (skip if already loaded to avoid scope conflicts)
 $coreModulePath = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'lib\core'
-if (-not (Get-Module -Name Config)) { Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force }
-if (-not (Get-Module -Name Logger)) { Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force }
-if (-not (Get-Module -Name Safety)) { Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force }
-if (-not (Get-Module -Name Trash)) { Import-Module (Join-Path $coreModulePath 'Trash.psm1') -Force }
+if (-not (Get-Module -Name Config)) { Import-Module (Join-Path $coreModulePath 'Config.psm1') -Force -Global }
+if (-not (Get-Module -Name Logger)) { Import-Module (Join-Path $coreModulePath 'Logger.psm1') -Force -Global }
+if (-not (Get-Module -Name Safety)) { Import-Module (Join-Path $coreModulePath 'Safety.psm1') -Force -Global }
+if (-not (Get-Module -Name Trash)) { Import-Module (Join-Path $coreModulePath 'Trash.psm1') -Force -Global }
 
 # Import I18n module
 $i18nModulePath = Join-Path $coreModulePath 'I18n.psm1'
 if ((Test-Path $i18nModulePath) -and -not (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue)) {
-    Import-Module $i18nModulePath -Force -ErrorAction SilentlyContinue
+    Import-Module $i18nModulePath -Force -Global -ErrorAction SilentlyContinue
     Initialize-WinOpsI18n -ErrorAction SilentlyContinue
 }
 
@@ -164,7 +164,7 @@ function Get-CacheSize {
             $items = Get-ChildItem -Path $expandedPath -Force -ErrorAction SilentlyContinue
         } else {
             # Handle direct paths
-            if (Test-Path $expandedPath) {
+            if (Test-Path $expandedPath -ErrorAction SilentlyContinue) {
                 $items = Get-ChildItem -Path $expandedPath -Recurse -Force -ErrorAction SilentlyContinue
             } else {
                 continue
@@ -331,13 +331,13 @@ function Clear-WinOpsCache {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     [OutputType([PSCustomObject])]
     param(
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateSet(
             'WindowsTemp', 'ChromeCache', 'EdgeCache', 'FirefoxCache',
             'WindowsStoreCache', 'ThumbnailCache', 'IconCache', 'FontCache',
             'Prefetch', 'DeliveryOptimization', 'All'
         )]
-        [string]$CacheType,
+        [string]$CacheType = 'All',
 
         [Parameter()]
         [ValidateRange(0, 365)]

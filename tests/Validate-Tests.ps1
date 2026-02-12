@@ -54,11 +54,11 @@ foreach ($testFile in $testFiles) {
             [ref]$null
         )
         $validation.SyntaxValid = $true
-        Write-Host "  ✓ Syntax valid" -ForegroundColor Green
+        Write-Host "  OK Syntax valid" -ForegroundColor Green
     }
     catch {
         $validation.Errors += "Syntax error: $_"
-        Write-Host "  ✗ Syntax error: $_" -ForegroundColor Red
+        Write-Host "  FAIL Syntax error: $_" -ForegroundColor Red
     }
 
     # Read content
@@ -67,29 +67,29 @@ foreach ($testFile in $testFiles) {
     # Check for BeforeAll
     if ($content -match 'BeforeAll\s*\{') {
         $validation.HasBeforeAll = $true
-        Write-Host "  ✓ Has BeforeAll block" -ForegroundColor Green
+        Write-Host "  OK Has BeforeAll block" -ForegroundColor Green
     }
     else {
         $validation.Warnings += "Missing BeforeAll block"
-        Write-Host "  ⚠ Missing BeforeAll block" -ForegroundColor Yellow
+        Write-Host "  [WARN] Missing BeforeAll block" -ForegroundColor Yellow
     }
 
     # Check for Describe blocks
     $describeMatches = [regex]::Matches($content, "Describe\s+'[^']+'")
     if ($describeMatches.Count -gt 0) {
         $validation.HasDescribe = $true
-        Write-Host "  ✓ Has $($describeMatches.Count) Describe block(s)" -ForegroundColor Green
+        Write-Host "  OK Has $($describeMatches.Count) Describe block(s)" -ForegroundColor Green
     }
     else {
         $validation.Errors += "No Describe blocks found"
-        Write-Host "  ✗ No Describe blocks found" -ForegroundColor Red
+        Write-Host "  FAIL No Describe blocks found" -ForegroundColor Red
     }
 
     # Check for Context blocks
     $contextMatches = [regex]::Matches($content, "Context\s+'[^']+'")
     if ($contextMatches.Count -gt 0) {
         $validation.HasContext = $true
-        Write-Host "  ✓ Has $($contextMatches.Count) Context block(s)" -ForegroundColor Green
+        Write-Host "  OK Has $($contextMatches.Count) Context block(s)" -ForegroundColor Green
     }
 
     # Check for It blocks (tests)
@@ -97,38 +97,38 @@ foreach ($testFile in $testFiles) {
     if ($itMatches.Count -gt 0) {
         $validation.HasIt = $true
         $validation.TestCount = $itMatches.Count
-        Write-Host "  ✓ Has $($itMatches.Count) test(s)" -ForegroundColor Green
+        Write-Host "  OK Has $($itMatches.Count) test(s)" -ForegroundColor Green
     }
     else {
         $validation.Errors += "No tests (It blocks) found"
-        Write-Host "  ✗ No tests (It blocks) found" -ForegroundColor Red
+        Write-Host "  FAIL No tests (It blocks) found" -ForegroundColor Red
     }
 
     # Check for Mock declarations
     $mockMatches = [regex]::Matches($content, "Mock\s+[\w-]+")
     $validation.MockCount = $mockMatches.Count
     if ($mockMatches.Count -gt 0) {
-        Write-Host "  ✓ Has $($mockMatches.Count) mock(s)" -ForegroundColor Green
+        Write-Host "  OK Has $($mockMatches.Count) mock(s)" -ForegroundColor Green
     }
 
     # Check for Should -Invoke
     $shouldInvokeMatches = [regex]::Matches($content, "Should\s+-Invoke")
     if ($shouldInvokeMatches.Count -gt 0) {
-        Write-Host "  ✓ Has $($shouldInvokeMatches.Count) mock verification(s)" -ForegroundColor Green
+        Write-Host "  OK Has $($shouldInvokeMatches.Count) mock verification(s)" -ForegroundColor Green
     }
 
     # Check for DryRun tests
     if ($content -match "DryRun") {
-        Write-Host "  ✓ Has DryRun mode tests" -ForegroundColor Green
+        Write-Host "  OK Has DryRun mode tests" -ForegroundColor Green
     }
     else {
         $validation.Warnings += "No DryRun mode tests"
-        Write-Host "  ⚠ No DryRun mode tests" -ForegroundColor Yellow
+        Write-Host "  [WARN] No DryRun mode tests" -ForegroundColor Yellow
     }
 
     # Check for Integration tests
     if ($content -match "Integration") {
-        Write-Host "  ✓ Has Integration tests" -ForegroundColor Green
+        Write-Host "  OK Has Integration tests" -ForegroundColor Green
     }
 
     $validationResults += $validation
@@ -157,7 +157,7 @@ if ($filesWithErrors -gt 0) {
     foreach ($result in $validationResults | Where-Object { $_.Errors.Count -gt 0 }) {
         Write-Host "`n$($result.File):" -ForegroundColor Red
         foreach ($error in $result.Errors) {
-            Write-Host "  • $error" -ForegroundColor Red
+            Write-Host "  * $error" -ForegroundColor Red
         }
     }
 }
@@ -168,7 +168,7 @@ if ($filesWithWarnings -gt 0) {
     foreach ($result in $validationResults | Where-Object { $_.Warnings.Count -gt 0 }) {
         Write-Host "`n$($result.File):" -ForegroundColor Yellow
         foreach ($warning in $result.Warnings) {
-            Write-Host "  • $warning" -ForegroundColor Yellow
+            Write-Host "  * $warning" -ForegroundColor Yellow
         }
     }
 }
@@ -177,9 +177,9 @@ if ($filesWithWarnings -gt 0) {
 Write-Host "`n=== Test Statistics ===" -ForegroundColor Cyan
 $validationResults |
     Select-Object File, TestCount, MockCount, @{N='Status';E={
-        if ($_.Errors.Count -gt 0) { '❌ Error' }
-        elseif ($_.Warnings.Count -gt 0) { '⚠️  Warning' }
-        else { '✅ Valid' }
+        if ($_.Errors.Count -gt 0) { '[FAIL] Error' }
+        elseif ($_.Warnings.Count -gt 0) { '[WARN]  Warning' }
+        else { '[OK] Valid' }
     }} |
     Format-Table -AutoSize |
     Out-String |
