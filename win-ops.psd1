@@ -3,7 +3,7 @@
     RootModule = 'bin/win-ops.ps1'
 
     # Version number of this module.
-    ModuleVersion = '1.0.0'
+    ModuleVersion = '0.6.2'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -55,7 +55,9 @@
         'Get-TrashItems',
         'Restore-TrashItem',
         'Install-WinOps',
-        'Uninstall-WinOps'
+        'Uninstall-WinOps',
+        'Set-WinOpsSchedule',
+        'Remove-WinOpsSchedule'
     )
 
     # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
@@ -92,7 +94,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'Initial release of win-ops v1.0.0'
+            ReleaseNotes = 'win-ops v0.6.2'
 
             # Prerelease string of this module
             # Prerelease = ''

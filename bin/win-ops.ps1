@@ -9,7 +9,7 @@
     system logs, and provides rollback capabilities.
 
 .PARAMETER Command
-    The command to execute. Valid commands: help, version, run, analyze, status, list-trash, restore, install, uninstall
+    The command to execute. Valid commands: help, version, run, analyze, status, list-trash, restore, install, uninstall, schedule, unschedule
 
 .PARAMETER DryRun
     Perform a dry run without making actual changes
@@ -30,7 +30,7 @@
     Execute cleanup operations without confirmation
 
 .NOTES
-    Version: 1.0.0
+    Version: Loaded from win-ops.psd1
     Author: Seunggabi
     License: MIT
 #>
@@ -38,7 +38,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'version', 'run', 'analyze', 'status', 'list-trash', 'restore', 'install', 'uninstall', '--help', '--version')]
+    [ValidateSet('help', 'version', 'run', 'analyze', 'status', 'list-trash', 'restore', 'install', 'uninstall', 'schedule', 'unschedule', '--help', '--version')]
     [string]$Command = 'help',
 
     [Parameter()]
@@ -74,9 +74,15 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Module version
-$script:ModuleVersion = '1.0.0'
+# Module version (read from psd1 manifest - single source of truth)
 $script:ModuleName = 'win-ops'
+$script:ManifestPath = Join-Path (Split-Path -Parent $PSCommandPath | Split-Path -Parent) 'win-ops.psd1'
+if (Test-Path $script:ManifestPath) {
+    $manifestData = Import-PowerShellDataFile -Path $script:ManifestPath
+    $script:ModuleVersion = $manifestData.ModuleVersion
+} else {
+    $script:ModuleVersion = 'unknown'
+}
 
 # Handle --version and --help flags
 if ($Version -or $Command -eq '--version') { $Command = 'version' }
@@ -106,6 +112,10 @@ function Get-WinOpsVersion {
     param()
 
     Write-Host (Get-WinOpsMessage -Key 'Version_Title' -Args $script:ModuleName, $script:ModuleVersion) -ForegroundColor Cyan
+    if (Test-Path $script:ManifestPath) {
+        $lastUpdated = (Get-Item $script:ManifestPath).LastWriteTime.ToString('yyyy-MM-dd')
+        Write-Host "  Last Updated: $lastUpdated" -ForegroundColor Gray
+    }
     Write-Host (Get-WinOpsMessage -Key 'Version_PowerShell' -Args $PSVersionTable.PSVersion) -ForegroundColor Gray
     $osInfo = if ($PSVersionTable.ContainsKey('OS')) { $PSVersionTable.OS } else { [System.Environment]::OSVersion.VersionString }
     Write-Host (Get-WinOpsMessage -Key 'Version_OS' -Args $osInfo) -ForegroundColor Gray
@@ -143,6 +153,10 @@ COMMANDS:
                     Sets up automatic hourly/daily cleanup (requires admin)
     uninstall       Uninstall win-ops scheduled task
                     Removes scheduled task and optionally data files
+    schedule        Register scheduled task from config settings
+                    Reads schedule section from win-ops.json (requires admin)
+    unschedule      Remove scheduled task
+                    Unregisters the Win-Ops scheduled task (requires admin)
 
 OPTIONS:
     --dry-run, -n   Perform analysis without making actual changes
@@ -191,6 +205,12 @@ EXAMPLES:
         Install as scheduled task (requires admin)
 
     win-ops uninstall
+        Remove scheduled task (requires admin)
+
+    win-ops schedule
+        Register scheduled task using config settings (requires admin)
+
+    win-ops unschedule
         Remove scheduled task (requires admin)
 
 CLEANUP MODULES:
@@ -347,47 +367,6 @@ function Start-WinOpsCleanup {
                 $config = Get-WinOpsConfig
             }
 
-            # Capture ASIS state
-            $asIsMemory = [math]::Round((Get-Process | Measure-Object -Property WorkingSet64 -Sum).Sum / 1MB, 2)
-            $asIsDisks = @()
-            try {
-                $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null }
-                foreach ($d in $drives) {
-                    $asIsDisks += @{
-                        Drive = $d.Name
-                        UsedGB = [math]::Round($d.Used / 1GB, 2)
-                        FreeGB = [math]::Round($d.Free / 1GB, 2)
-                        TotalGB = [math]::Round(($d.Used + $d.Free) / 1GB, 2)
-                    }
-                }
-            } catch { }
-
-            # Perform analysis before cleanup
-            Write-Host (Get-WinOpsMessage -Key 'Cleanup_AnalyzingTargets') -ForegroundColor Cyan
-            $beforeAnalysis = Get-WinOpsAnalysis -NoVisual
-
-            if ($beforeAnalysis.TotalItemCount -eq 0) {
-                Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_NoTargets')" -ForegroundColor Green
-                return
-            }
-
-            # Confirmation prompt
-            if (-not $Force -and -not $DryRun) {
-                Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_ReadyToClean')" -ForegroundColor Yellow
-                Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Items' -Args $beforeAnalysis.TotalItemCount)" -ForegroundColor White
-                Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Space' -Args $beforeAnalysis.TotalReclaimableGB)" -ForegroundColor White
-                Write-Host ""
-                $response = Read-Host (Get-WinOpsMessage -Key 'Cleanup_Confirm')
-                if ($response -notmatch '^[Yy]') {
-                    Write-Host (Get-WinOpsMessage -Key 'Cleanup_Cancelled') -ForegroundColor Gray
-                    return
-                }
-            }
-
-            # Execute cleanup modules
-            Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Executing')" -ForegroundColor Cyan
-            $results = @()
-
             # Module name to function name mapping
             $moduleMap = @{
                 'CacheCleanup'           = 'Clear-WinOpsCache'
@@ -423,9 +402,64 @@ function Start-WinOpsCleanup {
             # Choose module set based on --all flag
             $modulesToRun = if ($All) { $allModules } else { $defaultModules }
 
+            # Capture ASIS state
+            $asIsMemory = [math]::Round((Get-Process | Measure-Object -Property WorkingSet64 -Sum).Sum / 1MB, 2)
+            $asIsDisks = @()
+            try {
+                $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null }
+                foreach ($d in $drives) {
+                    $asIsDisks += @{
+                        Drive = $d.Name
+                        UsedGB = [math]::Round($d.Used / 1GB, 2)
+                        FreeGB = [math]::Round($d.Free / 1GB, 2)
+                        TotalGB = [math]::Round(($d.Used + $d.Free) / 1GB, 2)
+                    }
+                }
+            } catch { }
+
+            # Perform analysis before cleanup (only for modules that will actually run)
+            Write-Host (Get-WinOpsMessage -Key 'Cleanup_AnalyzingTargets') -ForegroundColor Cyan
+            $beforeAnalysis = Get-WinOpsAnalysis -NoVisual -Modules $modulesToRun
+
+            if ($beforeAnalysis.TotalItemCount -eq 0) {
+                Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_NoTargets')" -ForegroundColor Green
+                return
+            }
+
+            # Confirmation prompt
+            if (-not $Force -and -not $DryRun) {
+                Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_ReadyToClean')" -ForegroundColor Yellow
+                Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Items' -Args $beforeAnalysis.TotalItemCount)" -ForegroundColor White
+                Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Space' -Args $beforeAnalysis.TotalReclaimableGB)" -ForegroundColor White
+                Write-Host ""
+                $response = Read-Host (Get-WinOpsMessage -Key 'Cleanup_Confirm')
+                if ($response -notmatch '^[Yy]') {
+                    Write-Host (Get-WinOpsMessage -Key 'Cleanup_Cancelled') -ForegroundColor Gray
+                    return
+                }
+            }
+
+            # Execute cleanup modules
+            Write-Host "`n$(Get-WinOpsMessage -Key 'Cleanup_Executing')" -ForegroundColor Cyan
+            $results = @()
+
             # Suppress confirmation prompts for all modules (already confirmed at top level)
             $savedConfirmPreference = $ConfirmPreference
             $ConfirmPreference = 'None'
+
+            # Build module settings lookup from win-ops.json
+            $moduleSettings = @{}
+            $winOpsJsonPath = Join-Path $script:ScriptRoot 'config\win-ops.json'
+            if (Test-Path $winOpsJsonPath) {
+                $rawConfig = Get-Content $winOpsJsonPath -Raw | ConvertFrom-Json
+                if ($rawConfig.modules) {
+                    foreach ($mod in $rawConfig.modules) {
+                        if ($mod.name -and $mod.settings) {
+                            $moduleSettings[$mod.name] = $mod.settings
+                        }
+                    }
+                }
+            }
 
             foreach ($moduleName in $modulesToRun) {
                 try {
@@ -439,13 +473,36 @@ function Start-WinOpsCleanup {
                     Import-Module $modulePath -Force
 
                     $functionName = $moduleMap[$moduleName]
+                    $command = Get-Command $functionName -ErrorAction SilentlyContinue
 
-                    if (Get-Command $functionName -ErrorAction SilentlyContinue) {
+                    if ($command) {
                         Write-Host "  $(Get-WinOpsMessage -Key 'Cleanup_Running' -Args $moduleName)" -ForegroundColor Gray
 
                         $params = @{
                             DryRun = $DryRun
                             Force  = $true
+                        }
+
+                        # Merge module-specific config settings into params
+                        if ($moduleSettings.ContainsKey($moduleName)) {
+                            foreach ($key in $moduleSettings[$moduleName].PSObject.Properties.Name) {
+                                $paramName = $key.Substring(0,1).ToUpper() + $key.Substring(1)
+                                if ($command.Parameters.ContainsKey($paramName) -and -not $params.ContainsKey($paramName)) {
+                                    $params[$paramName] = $moduleSettings[$moduleName].$key
+                                }
+                            }
+                        }
+
+                        # Fill mandatory parameters that have ValidateSet with "All" default
+                        foreach ($pName in $command.Parameters.Keys) {
+                            $p = $command.Parameters[$pName]
+                            $isMandatory = $p.Attributes | Where-Object { $_ -is [System.Management.Automation.ParameterAttribute] -and $_.Mandatory }
+                            if ($isMandatory -and -not $params.ContainsKey($pName)) {
+                                $validateSet = $p.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+                                if ($validateSet -and $validateSet.ValidValues -contains 'All') {
+                                    $params[$pName] = 'All'
+                                }
+                            }
                         }
 
                         $result = & $functionName @params
@@ -1006,6 +1063,134 @@ function Uninstall-WinOps {
     }
 }
 
+function Set-WinOpsSchedule {
+    <#
+    .SYNOPSIS
+        Register win-ops as a scheduled task using config settings
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        Write-Host ""
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                    Win-Ops Schedule Setup                                |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host ""
+
+        # Check for admin privileges
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+        if (-not $isAdmin) {
+            Write-Error (Get-WinOpsMessage -Key 'Install_AdminRequired' -Default 'Administrator privileges required.')
+            Write-Host ""
+            Write-Host (Get-WinOpsMessage -Key 'Install_AdminPrompt' -Default 'Run as Administrator:') -ForegroundColor Yellow
+            Write-Host "  Start-Process pwsh -Verb RunAs -ArgumentList '-NoExit', '-Command', 'cd $PWD; .\bin\win-ops.ps1 schedule'" -ForegroundColor White
+            Write-Host ""
+            return
+        }
+
+        # Load config to read schedule section
+        $configModule = Join-Path $script:ScriptRoot 'lib\core\Config.psm1'
+        if (Test-Path $configModule) {
+            Import-Module $configModule -Force
+        }
+
+        $config = Get-WinOpsConfig
+        $interval = 'Hourly'
+        $startTime = $null
+
+        if ($config -and $config.schedule) {
+            if ($config.schedule.interval) { $interval = $config.schedule.interval }
+            if ($config.schedule.startTime) { $startTime = $config.schedule.startTime }
+        }
+
+        # Import TaskScheduler module
+        $schedulerModule = Join-Path $script:ScriptRoot 'scheduler\TaskScheduler.psm1'
+        if (-not (Test-Path $schedulerModule)) {
+            Write-Error "TaskScheduler module not found: $schedulerModule"
+            return
+        }
+        Import-Module $schedulerModule -Force
+
+        Write-Host "Registering scheduled task..." -ForegroundColor Yellow
+        Write-Host "  Interval: $interval" -ForegroundColor Gray
+        if ($startTime) {
+            Write-Host "  Start Time: $startTime" -ForegroundColor Gray
+        }
+        Write-Host ""
+
+        $params = @{
+            Interval = $interval
+            Force    = $true
+        }
+        if ($startTime) {
+            $params['StartTime'] = $startTime
+        }
+
+        Install-WinOpsScheduledTask @params
+
+        Write-Host ""
+        Write-Host "Scheduled task registered successfully." -ForegroundColor Green
+        Write-Host "  To change settings, edit config/win-ops.json [schedule] section." -ForegroundColor Gray
+        Write-Host ""
+    }
+    catch {
+        Write-Error "Failed to set schedule: $_"
+        Write-Verbose $_.ScriptStackTrace
+    }
+}
+
+function Remove-WinOpsSchedule {
+    <#
+    .SYNOPSIS
+        Unregister win-ops scheduled task
+    #>
+    [CmdletBinding()]
+    param()
+
+    try {
+        Write-Host ""
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host "|                   Win-Ops Schedule Remove                                |" -ForegroundColor Cyan
+        Write-Host "+==========================================================================+" -ForegroundColor Cyan
+        Write-Host ""
+
+        # Check for admin privileges
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+        if (-not $isAdmin) {
+            Write-Error (Get-WinOpsMessage -Key 'Uninstall_AdminRequired' -Default 'Administrator privileges required.')
+            Write-Host ""
+            Write-Host (Get-WinOpsMessage -Key 'Uninstall_AdminPrompt' -Default 'Run as Administrator:') -ForegroundColor Yellow
+            Write-Host "  Start-Process pwsh -Verb RunAs -ArgumentList '-NoExit', '-Command', 'cd $PWD; .\bin\win-ops.ps1 unschedule'" -ForegroundColor White
+            Write-Host ""
+            return
+        }
+
+        # Import TaskScheduler module
+        $schedulerModule = Join-Path $script:ScriptRoot 'scheduler\TaskScheduler.psm1'
+        if (-not (Test-Path $schedulerModule)) {
+            Write-Error "TaskScheduler module not found: $schedulerModule"
+            return
+        }
+        Import-Module $schedulerModule -Force
+
+        Write-Host "Removing scheduled task..." -ForegroundColor Yellow
+        Write-Host ""
+
+        Uninstall-WinOpsScheduledTask -Force
+
+        Write-Host ""
+        Write-Host "Scheduled task removed successfully." -ForegroundColor Green
+        Write-Host ""
+    }
+    catch {
+        Write-Error "Failed to remove schedule: $_"
+        Write-Verbose $_.ScriptStackTrace
+    }
+}
+
 function Invoke-WinOps {
     <#
     .SYNOPSIS
@@ -1047,6 +1232,12 @@ function Invoke-WinOps {
         }
         'uninstall' {
             Uninstall-WinOps
+        }
+        'schedule' {
+            Set-WinOpsSchedule
+        }
+        'unschedule' {
+            Remove-WinOpsSchedule
         }
         default {
             Write-Error (Get-WinOpsMessage -Key 'Error_UnknownCommand' -Args $Command)

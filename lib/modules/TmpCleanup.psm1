@@ -176,6 +176,8 @@ function Get-TempFileCount {
         $null
     }
 
+    $maxItems = 10000
+
     foreach ($path in $Paths) {
         $expandedPath = [Environment]::ExpandEnvironmentVariables($path)
 
@@ -183,12 +185,14 @@ function Get-TempFileCount {
             if ($expandedPath -like '*`**') {
                 # Wildcard path - get matching files
                 $items = Get-ChildItem -Path $expandedPath -Force -ErrorAction SilentlyContinue
+            } elseif (Test-Path $expandedPath -PathType Leaf -ErrorAction SilentlyContinue) {
+                # Single file path - use Get-Item (Get-ChildItem -Recurse hangs on files)
+                $items = @(Get-Item -Path $expandedPath -Force -ErrorAction SilentlyContinue)
+            } elseif (Test-Path $expandedPath -PathType Container -ErrorAction SilentlyContinue) {
+                # Directory path - recurse with item limit
+                $items = Get-ChildItem -Path $expandedPath -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First $maxItems
             } else {
-                # Directory path - get all contents
-                if (-not (Test-Path $expandedPath)) {
-                    continue
-                }
-                $items = Get-ChildItem -Path $expandedPath -Recurse -Force -ErrorAction SilentlyContinue
+                continue
             }
 
             foreach ($item in $items) {

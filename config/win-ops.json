@@ -1,7 +1,5 @@
 {
   "$schema": "./schema.json",
-  "version": "1.0.0",
-  "lastUpdated": "2024-01-01",
 
   "general": {
     "dryRun": false,

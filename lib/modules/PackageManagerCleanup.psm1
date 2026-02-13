@@ -131,28 +131,13 @@ function Test-WindowsUpdateActive {
             return $false
         }
 
-        # Check if service is running
+        # Check if service is running — if not running, updates are not active
         if ($wuService.Status -ne 'Running') {
             return $false
         }
 
-        # Check for active update sessions
-        $updateSession = New-Object -ComObject Microsoft.Update.Session -ErrorAction SilentlyContinue
-        if ($null -ne $updateSession) {
-            $updateSearcher = $updateSession.CreateUpdateSearcher()
-
-            # If we can create a searcher and it's not busy, updates are not active
-            try {
-                $searchResult = $updateSearcher.Search("IsInstalled=0")
-                return $false
-            }
-            catch {
-                # If search fails, updates might be installing
-                return $true
-            }
-        }
-
-        return $false
+        # Service is running — assume updates may be active (skip COM search which can hang)
+        return $true
     }
     catch {
         Write-Verbose "Failed to check Windows Update status: $_"
