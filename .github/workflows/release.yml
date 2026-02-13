@@ -29,9 +29,13 @@ jobs:
       - name: Install ps2exe
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "Installing ps2exe..."
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module ps2exe -Scope CurrentUser -Force
           Import-Module ps2exe
+          Write-Host "ps2exe installed successfully"
+          Get-Command -Module ps2exe | Format-Table Name, Version
 
       - name: Build EXE
         shell: pwsh
@@ -43,35 +47,18 @@ jobs:
           Write-Host "Working directory: $(Get-Location)"
           Write-Host "Input file exists: $(Test-Path 'bin\win-ops.ps1')"
 
-          try {
-            # Build win-ops.exe
-            Invoke-ps2exe `
-              -inputFile "bin\win-ops.ps1" `
-              -outputFile "win-ops.exe" `
-              -noConsole:$false `
-              -title "win-ops - Windows Operations Manager" `
-              -version $version `
-              -company "Seunggabi" `
-              -product "win-ops" `
-              -copyright "MIT License" `
-              -requireAdmin:$false `
-              -supportOS `
-              -x64 `
-              -verbose
+          # Build win-ops.exe with minimal options first
+          Write-Host "Calling ps2exe..."
+          ps2exe -inputFile "bin\win-ops.ps1" -outputFile "win-ops.exe" -noConsole -verbose
 
-            if (Test-Path "win-ops.exe") {
-              Write-Host "✅ win-ops.exe built successfully"
-              $size = (Get-Item "win-ops.exe").Length / 1MB
-              Write-Host "📦 Size: $([math]::Round($size, 2)) MB"
-            } else {
-              throw "win-ops.exe was not created"
-            }
-          } catch {
-            Write-Error "❌ Failed to build win-ops.exe: $_"
-            Write-Error $_.Exception.Message
-            Write-Error $_.ScriptStackTrace
+          if (-not (Test-Path "win-ops.exe")) {
+            Write-Error "❌ Failed to build win-ops.exe"
             exit 1
           }
+
+          Write-Host "✅ win-ops.exe built successfully"
+          $size = (Get-Item "win-ops.exe").Length / 1MB
+          Write-Host "📦 Size: $([math]::Round($size, 2)) MB"
 
       - name: Create Release Archive
         shell: pwsh
