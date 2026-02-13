@@ -69,6 +69,23 @@ try {
         Write-WinOpsLog -Level INFO -Message "Taking system snapshot (before)"
         $snapshotBefore = Get-WinOpsSnapshot -IncludeDisk -IncludeMemory
 
+        # Module name to function name mapping
+        $functionMap = @{
+            'CacheCleanup'          = 'Clear-WinOpsCache'
+            'TmpCleanup'            = 'Clear-WinOpsTempFiles'
+            'LogCleanup'            = 'Clear-WinOpsLogFiles'
+            'MemoryCleanup'         = 'Clear-WinOpsMemory'
+            'RegistryCleanup'       = 'Clear-WinOpsRegistry'
+            'HistoryCleanup'        = 'Clear-WinOpsHistory'
+            'OrphanAppCleanup'      = 'Clear-WinOpsOrphanedAppData'
+            'BrowserCleanup'        = 'Clear-WinOpsBrowserData'
+            'DevCleanup'            = 'Invoke-WinOpsDevCleanup'
+            'DockerCleanup'         = 'Clear-WinOpsDockerResources'
+            'PackageManagerCleanup' = 'Clear-WinOpsPackageManagerCache'
+            'ZombieKiller'          = 'Invoke-WinOpsZombieCleanup'
+            'OrphanKiller'          = 'Invoke-WinOpsOrphanCleanup'
+        }
+
         # Execute cleanup modules based on configuration
         $results = @()
         $totalFreed = 0
@@ -84,17 +101,17 @@ try {
                 Write-WinOpsLog -Level INFO -Message "Executing module: $($module.Name)"
 
                 # Import module
-                $modulePath = Join-Path $modulePath "lib\modules\$($module.Name).psm1"
+                $moduleFilePath = Join-Path $modulePath "lib\modules\$($module.Name).psm1"
 
-                if (-not (Test-Path $modulePath)) {
-                    Write-WinOpsLog -Level WARN -Message "Module file not found: $modulePath"
+                if (-not (Test-Path $moduleFilePath)) {
+                    Write-WinOpsLog -Level WARN -Message "Module file not found: $moduleFilePath"
                     continue
                 }
 
-                Import-Module $modulePath -Force
+                Import-Module $moduleFilePath -Force
 
-                # Execute cleanup function
-                $functionName = "Clear-WinOps$($module.Name)"
+                # Execute cleanup function (use mapping, fallback to convention)
+                $functionName = if ($functionMap.ContainsKey($module.Name)) { $functionMap[$module.Name] } else { "Clear-WinOps$($module.Name)" }
 
                 if (-not (Get-Command $functionName -ErrorAction SilentlyContinue)) {
                     Write-WinOpsLog -Level WARN -Message "Function $functionName not found"
@@ -177,8 +194,8 @@ try {
 
         # Generate summary
         $totalFreedGB = [math]::Round($totalFreed / 1GB, 2)
-        $successCount = ($results | Where-Object { $_.Success }).Count
-        $failureCount = ($results | Where-Object { -not $_.Success }).Count
+        $successCount = @($results | Where-Object { $_.Success }).Count
+        $failureCount = @($results | Where-Object { -not $_.Success }).Count
 
         $summary = @"
 Win-Ops Scheduled Cleanup Summary
