@@ -233,8 +233,17 @@ if (Test-Path $InstallPath) {
         exit 1
     }
 
-    Write-InstallMessage "Removing existing installation..." -Type Info
-    Remove-Item -Path $InstallPath -Recurse -Force -ErrorAction Stop
+    Write-InstallMessage "Updating program files (preserving logs/trash)..." -Type Info
+    # Only remove program directories, preserve user data (logs, trash, snapshots)
+    foreach ($dir in @('bin', 'lib', 'config', 'scheduler', 'resources')) {
+        $target = Join-Path $InstallPath $dir
+        if (Test-Path $target) {
+            Remove-Item -Path $target -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+    # Remove module manifest
+    $psd1 = Join-Path $InstallPath 'win-ops.psd1'
+    if (Test-Path $psd1) { Remove-Item -Path $psd1 -Force -ErrorAction SilentlyContinue }
 }
 
 try {
