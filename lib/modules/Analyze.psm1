@@ -175,11 +175,21 @@ function Get-ModuleTargets {
     Write-Verbose "Calling function: $functionName"
 
     try {
-        $command = Get-Command $functionName -ErrorAction Stop
+        $command = Get-Command $functionName -ErrorAction SilentlyContinue
+        if (-not $command) {
+            Write-Verbose "Function not found: $functionName - skipping"
+            return @()
+        }
 
-        # Call function with parameters
-        $result = & $functionName @Parameters
+        # Filter parameters to only those accepted by the target function
+        $validParams = @{}
+        foreach ($key in $Parameters.Keys) {
+            if ($command.Parameters.ContainsKey($key)) {
+                $validParams[$key] = $Parameters[$key]
+            }
+        }
 
+        $result = & $functionName @validParams
         return $result
     }
     catch {
@@ -398,7 +408,10 @@ function Get-WinOpsAnalysis {
         [string]$ExportJson,
 
         [Parameter()]
-        [switch]$NoVisual
+        [switch]$NoVisual,
+
+        [Parameter()]
+        [string[]]$Modules
     )
 
     $msg = if (Get-Command Get-WinOpsMessage -ErrorAction SilentlyContinue) {
@@ -417,6 +430,9 @@ function Get-WinOpsAnalysis {
         @($Category)
     }
 
+    # Build module allow-list (if -Modules was provided, skip categories that have no matching modules)
+    $moduleAllowList = if ($Modules -and $Modules.Count -gt 0) { $Modules } else { $null }
+
     # Collect targets from all modules
     foreach ($categoryKey in $categoriesToAnalyze) {
         $categoryInfo = $script:CleanupCategories[$categoryKey]
@@ -424,6 +440,12 @@ function Get-WinOpsAnalysis {
         Write-Verbose "Analyzing category: $($categoryInfo.Name)"
 
         foreach ($moduleName in $categoryInfo.Modules) {
+            # Skip modules not in the allow-list
+            if ($moduleAllowList -and $moduleName -notin $moduleAllowList) {
+                Write-Verbose "  Skipping module (not in run list): $moduleName"
+                continue
+            }
+
             Write-Verbose "  Loading module: $moduleName"
 
             if (-not (Import-CleanupModule -ModuleName $moduleName)) {
@@ -434,7 +456,7 @@ function Get-WinOpsAnalysis {
                 AgeInDays = $AgeInDays
             }
 
-            # Get targets from module
+            # Get targets from module (with timeout)
             $moduleTargets = Get-ModuleTargets -ModuleName $moduleName -Parameters $parameters
 
             if ($null -eq $moduleTargets -or $moduleTargets.Count -eq 0) {

@@ -75,16 +75,17 @@ win-ops run --force
 ### 3. Schedule (optional, requires admin)
 
 ```powershell
-# Register hourly automatic cleanup
-.\install.ps1 -InstallScheduledTask -ScheduleInterval Hourly
+# Register scheduled task using config settings (interval, startTime, etc.)
+win-ops schedule
+
+# Remove scheduled task
+win-ops unschedule
 ```
 
-Or if already installed:
+Or via install script:
 
 ```powershell
-# Run as Administrator
-Import-Module "$env:LOCALAPPDATA\win-ops\scheduler\TaskScheduler.psm1"
-Install-WinOpsScheduledTask -Interval Hourly -Force
+.\install.ps1 -InstallScheduledTask -ScheduleInterval Hourly
 ```
 
 ## Requirements
@@ -110,6 +111,8 @@ win-ops <command> [options]
 | `restore` | Restore deleted items from trash |
 | `install` | Install as scheduled task (admin) |
 | `uninstall` | Remove scheduled task (admin) |
+| `schedule` | Register scheduled task from config settings (admin) |
+| `unschedule` | Remove scheduled task (admin) |
 
 ### Options
 
@@ -146,61 +149,103 @@ win-ops restore
 ## Configuration
 
 Config file: `%LOCALAPPDATA%\win-ops\config\win-ops.json`
+Default config: [`config/win-ops.json`](config/win-ops.json)
 
-### Enable/disable modules
+### Configuration Reference
 
-Each module can be toggled independently:
+#### `general` - General settings
 
-```json
-{
-  "modules": [
-    {
-      "name": "CacheCleanup",
-      "enabled": true,
-      "settings": {
-        "location": "All",
-        "ageInDays": 7,
-        "useTrash": true
-      }
-    },
-    {
-      "name": "BrowserCleanup",
-      "enabled": false,
-      "settings": {
-        "browser": "All",
-        "dataType": "Cache"
-      }
-    },
-    {
-      "name": "MemoryCleanup",
-      "enabled": true,
-      "settings": {
-        "minWorkingSetMB": 50,
-        "minIdleMinutes": 10
-      }
-    },
-    {
-      "name": "RegistryCleanup",
-      "enabled": true,
-      "settings": {
-        "backupBeforeDelete": true,
-        "cleanUninstallEntries": true,
-        "cleanSharedDLLs": true
-      }
-    },
-    {
-      "name": "HistoryCleanup",
-      "enabled": true,
-      "settings": {
-        "clearRunDialog": true,
-        "clearExplorerPaths": true,
-        "clearClipboard": true,
-        "clearShellHistory": true
-      }
-    }
-  ]
-}
-```
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `dryRun` | bool | `false` | Global dry-run mode (no actual changes) |
+| `verbose` | bool | `false` | Enable verbose logging output |
+| `useTrash` | bool | `true` | Move files to trash instead of permanent delete |
+| `parallel` | bool | `true` | Enable parallel module execution |
+| `maxThreads` | int | `4` | Maximum parallel threads |
+| `timeoutSeconds` | int | `300` | Per-module timeout in seconds |
+
+#### `paths` - Directory paths
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `trash` | string | `%LOCALAPPDATA%\win-ops\trash` | Trash storage directory |
+| `logs` | string | `%LOCALAPPDATA%\win-ops\logs` | Log file directory |
+| `config` | string | `%LOCALAPPDATA%\win-ops\config` | Config file directory |
+
+#### `retention` - Data retention periods
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `trashHours` | int | `72` | Hours before trash items are permanently deleted |
+| `logDays` | int | `14` | Days to keep log files |
+| `snapshotDays` | int | `30` | Days to keep before/after snapshots |
+
+#### `modules` - Cleanup module settings
+
+Each module is an object with `name`, `enabled`, and `settings`:
+
+| Module | Default Enabled | Key Settings |
+|--------|:---:|-------------|
+| `CacheCleanup` | ✅ | `location`: All, `ageInDays`: 7, `useTrash`: true |
+| `TmpCleanup` | ✅ | `location`: All, `ageInDays`: 3, `useTrash`: true |
+| `LogCleanup` | ✅ | `location`: All, `ageInDays`: 90, `minSizeMB`: 1, `useTrash`: true |
+| `BrowserCleanup` | ✅ | `browser`: All, `dataType`: Cache, `useTrash`: true |
+| `PackageManagerCleanup` | ✅ | `managers`: ["chocolatey", "scoop"], `useTrash`: true |
+| `MemoryCleanup` | ✅ | `minWorkingSetMB`: 50, `minIdleMinutes`: 10 |
+| `HistoryCleanup` | ✅ | `clearRunDialog`, `clearExplorerPaths`, `clearClipboard`, `clearShellHistory`, etc. |
+| `RegistryCleanup` | ✅ | `backupBeforeDelete`: true, `cleanUninstallEntries`, `cleanSharedDLLs`, `cleanMUICache`, etc. |
+| `OrphanAppCleanup` | ✅ | `dataType`: All, `minAgeInDays`: 30, `useTrash`: true |
+| `ZombieKiller` | ✅ | `cpuThreshold`: 0.5, `memoryThresholdMB`: 100, `minAgeMinutes`: 30, `dryRun`: true |
+| `DevCleanup` | ❌ | `targets`: ["npm", "yarn", "pip"], `useTrash`: true |
+| `DockerCleanup` | ❌ | `pruneImages`: false, `pruneContainers`: true, `pruneVolumes`: false, `pruneNetworks`: true |
+| `OrphanKiller` | ❌ | `minAgeMinutes`: 60 |
+
+#### `safety` - Safety constraints
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `protectedPaths` | string[] | `["%SystemRoot%", "%ProgramFiles%", ...]` | Directories that are never modified |
+| `protectedExtensions` | string[] | `[".exe", ".dll", ".sys", ".ini", ".cfg"]` | File extensions that are never deleted |
+| `confirmDeletion` | bool | `true` | Require confirmation before cleanup |
+| `maxBatchSize` | int | `1000` | Maximum items per batch operation |
+
+#### `notifications` - Toast notification settings
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `enabled` | bool | `true` | Enable Windows toast notifications |
+| `types.success` | bool | `true` | Notify on successful cleanup |
+| `types.warning` | bool | `true` | Notify on warnings |
+| `types.error` | bool | `true` | Notify on errors |
+| `minSpaceFreedMB` | int | `100` | Minimum freed space (MB) to trigger notification |
+
+#### `logging` - Log settings
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `level` | string | `"INFO"` | Log level: DEBUG, INFO, WARN, ERROR |
+| `maxLogSizeMB` | int | `5` | Maximum log file size before rotation |
+| `maxLogFiles` | int | `7` | Number of rotated log files to keep |
+| `colorOutput` | bool | `true` | Enable colored console output |
+
+#### `snapshot` - Before/after snapshot settings
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `beforeCleanup` | bool | `true` | Capture system state before cleanup |
+| `afterCleanup` | bool | `true` | Capture system state after cleanup |
+| `exportPath` | string | `%LOCALAPPDATA%\win-ops\snapshots` | Snapshot storage directory |
+| `retention.keepCount` | int | `30` | Maximum number of snapshots to keep |
+| `retention.keepDays` | int | `90` | Days to keep snapshots |
+
+#### `schedule` - Scheduled task settings
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `enabled` | bool | `true` | Enable scheduled task |
+| `interval` | string | `"Hourly"` | Execution interval: `Hourly`, `Daily`, `Weekly` |
+| `startTime` | string | `"00:00"` | Start time for Daily/Weekly schedules |
+| `runOnBattery` | bool | `false` | Run when on battery power |
 
 ### Module activation modes
 
@@ -227,35 +272,6 @@ Activates ALL modules including advanced/optional ones for deep cleaning.
 | OrphanKiller | ❌ | ✅ | Orphaned processes (advanced) |
 
 > 💡 **Tip**: Start with default mode. Use `--all` when you need deep cleaning or are troubleshooting performance issues.
-
-### Key settings
-
-```json
-{
-  "general": {
-    "dryRun": false,
-    "useTrash": true,
-    "parallel": true,
-    "maxThreads": 4,
-    "timeoutSeconds": 300
-  },
-  "retention": {
-    "trashHours": 72,
-    "logDays": 14,
-    "snapshotDays": 30
-  },
-  "safety": {
-    "protectedPaths": ["%SystemRoot%", "%ProgramFiles%", "%USERPROFILE%\\Documents"],
-    "protectedExtensions": [".exe", ".dll", ".sys"],
-    "confirmDeletion": true,
-    "maxBatchSize": 1000
-  },
-  "schedule": {
-    "enabled": true,
-    "interval": "Hourly"
-  }
-}
-```
 
 ## Safety
 
@@ -349,21 +365,59 @@ win-ops supports Korean and English. The language is auto-detected from your Win
 
 ## Scheduled Task
 
-When installed as a scheduled task, win-ops runs `win-ops run --force` at the configured interval (default: hourly).
+When installed as a scheduled task, win-ops automatically runs `win-ops run --force` at the configured interval.
+
+### How it works
+
+1. **Installation** registers a Windows Task Scheduler task named `"Win-Ops System Cleanup"`
+2. **Default interval is Hourly** — every hour, the task executes cleanup with all default modules
+3. The interval can be changed in `config/win-ops.json` under `schedule.interval` (`Hourly`, `Daily`, `Weekly`)
+4. On battery power, the task is **skipped by default** (`runOnBattery: false`)
+5. Each run acquires a mutex lock to prevent concurrent execution — if a previous run is still active, the new run exits gracefully
+
+### Install / Manage
 
 ```powershell
+# Register scheduled task using config settings (requires admin)
+win-ops schedule
+
+# Remove scheduled task (requires admin)
+win-ops unschedule
+
+# Or install with custom interval via install.ps1
+.\install.ps1 -InstallScheduledTask -ScheduleInterval Daily
+
 # Check task status
 Get-ScheduledTask -TaskName "Win-Ops System Cleanup"
 
-# Disable
+# Disable temporarily
 Disable-ScheduledTask -TaskName "Win-Ops System Cleanup"
 
-# Enable
+# Re-enable
 Enable-ScheduledTask -TaskName "Win-Ops System Cleanup"
 
-# Remove
+# Remove completely
+win-ops uninstall
+# or manually:
 Unregister-ScheduledTask -TaskName "Win-Ops System Cleanup"
 ```
+
+### Change interval
+
+Edit `%LOCALAPPDATA%\win-ops\config\win-ops.json`:
+
+```json
+{
+  "schedule": {
+    "enabled": true,
+    "interval": "Daily",
+    "startTime": "03:00",
+    "runOnBattery": false
+  }
+}
+```
+
+Then re-run `win-ops schedule` to apply the new schedule.
 
 ## Development
 

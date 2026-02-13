@@ -156,19 +156,22 @@ function Get-CacheSize {
         $null
     }
 
+    $maxItems = 10000
+
     foreach ($path in $Paths) {
         $expandedPath = [Environment]::ExpandEnvironmentVariables($path)
 
         if ($expandedPath -like '*`**') {
             # Handle wildcard paths
             $items = Get-ChildItem -Path $expandedPath -Force -ErrorAction SilentlyContinue
+        } elseif (Test-Path $expandedPath -PathType Leaf -ErrorAction SilentlyContinue) {
+            # Single file path - use Get-Item (Get-ChildItem -Recurse hangs on files)
+            $items = @(Get-Item -Path $expandedPath -Force -ErrorAction SilentlyContinue)
+        } elseif (Test-Path $expandedPath -PathType Container -ErrorAction SilentlyContinue) {
+            # Directory path - recurse with item limit
+            $items = Get-ChildItem -Path $expandedPath -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -First $maxItems
         } else {
-            # Handle direct paths
-            if (Test-Path $expandedPath -ErrorAction SilentlyContinue) {
-                $items = Get-ChildItem -Path $expandedPath -Recurse -Force -ErrorAction SilentlyContinue
-            } else {
-                continue
-            }
+            continue
         }
 
         foreach ($item in $items) {
