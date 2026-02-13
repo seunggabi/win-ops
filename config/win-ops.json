@@ -27,7 +27,7 @@
       "name": "CacheCleanup",
       "enabled": true,
       "settings": {
-        "location": "All",
+        "CacheType": "All",
         "ageInDays": 7,
         "useTrash": true
       }
@@ -82,7 +82,7 @@
       "name": "PackageManagerCleanup",
       "enabled": true,
       "settings": {
-        "managers": ["chocolatey", "scoop"],
+        "PackageManager": "All",
         "useTrash": true
       }
     },
@@ -92,7 +92,6 @@
       "settings": {
         "cpuThreshold": 0.5,
         "memoryThresholdMB": 100,
-        "minAgeMinutes": 30,
         "dryRun": true
       }
     },
