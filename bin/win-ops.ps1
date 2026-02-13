@@ -323,6 +323,21 @@ function Start-WinOpsCleanup {
                 $config = Get-WinOpsConfig
             }
 
+            # Capture ASIS state
+            $asIsMemory = [math]::Round((Get-Process | Measure-Object -Property WorkingSet64 -Sum).Sum / 1MB, 2)
+            $asIsDisks = @()
+            try {
+                $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null }
+                foreach ($d in $drives) {
+                    $asIsDisks += @{
+                        Drive = $d.Name
+                        UsedGB = [math]::Round($d.Used / 1GB, 2)
+                        FreeGB = [math]::Round($d.Free / 1GB, 2)
+                        TotalGB = [math]::Round(($d.Used + $d.Free) / 1GB, 2)
+                    }
+                }
+            } catch { }
+
             # Perform analysis before cleanup
             Write-Host (Get-WinOpsMessage -Key 'Cleanup_AnalyzingTargets') -ForegroundColor Cyan
             $beforeAnalysis = Get-WinOpsAnalysis -NoVisual
@@ -426,11 +441,34 @@ function Start-WinOpsCleanup {
                 }
             }
 
+            # Capture TOBE state
+            $toBeMemory = [math]::Round((Get-Process | Measure-Object -Property WorkingSet64 -Sum).Sum / 1MB, 2)
+            $toBeDisks = @()
+            try {
+                $drives = Get-PSDrive -PSProvider FileSystem | Where-Object { $_.Used -ne $null }
+                foreach ($d in $drives) {
+                    $toBeDisks += @{
+                        Drive = $d.Name
+                        UsedGB = [math]::Round($d.Used / 1GB, 2)
+                        FreeGB = [math]::Round($d.Free / 1GB, 2)
+                        TotalGB = [math]::Round(($d.Used + $d.Free) / 1GB, 2)
+                    }
+                }
+            } catch { }
+
             # Save last cleanup results
             $lastCleanup = @{
                 Timestamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
                 DryRun = [bool]$DryRun
                 Results = @()
+                AsIs = @{
+                    MemoryMB = $asIsMemory
+                    Disks = $asIsDisks
+                }
+                ToBe = @{
+                    MemoryMB = $toBeMemory
+                    Disks = $toBeDisks
+                }
             }
             foreach ($entry in $results) {
                 $r = $entry.Result
@@ -445,7 +483,7 @@ function Start-WinOpsCleanup {
                 }
             }
             $lastCleanupPath = Join-Path $env:LOCALAPPDATA 'win-ops\last-cleanup.json'
-            $lastCleanup | ConvertTo-Json -Depth 3 | Set-Content -Path $lastCleanupPath -Encoding UTF8 -Force -ErrorAction SilentlyContinue
+            $lastCleanup | ConvertTo-Json -Depth 5 | Set-Content -Path $lastCleanupPath -Encoding UTF8 -Force -ErrorAction SilentlyContinue
 
             # Purge trash if requested
             if ($PurgeTrash -and -not $DryRun) {
@@ -576,18 +614,73 @@ function Get-WinOpsStatus {
                 if ($lastObj.DryRun) {
                     Write-Host "  Mode: DRY RUN" -ForegroundColor Yellow
                 }
+                Write-Host ""
 
+                # ASIS → TOBE comparison
+                if ($lastObj.AsIs -and $lastObj.ToBe) {
+                    Write-Host "  --- ASIS -> TOBE ---" -ForegroundColor Yellow
+                    Write-Host ""
+
+                    # Memory
+                    $memBefore = $lastObj.AsIs.MemoryMB
+                    $memAfter = $lastObj.ToBe.MemoryMB
+                    $memDiff = [math]::Round($memBefore - $memAfter, 2)
+                    $memColor = if ($memDiff -gt 0) { 'Green' } else { 'Gray' }
+                    Write-Host "  Memory" -ForegroundColor White
+                    Write-Host "    ASIS: " -NoNewline -ForegroundColor Gray
+                    Write-Host ("{0:N0} MB" -f $memBefore) -ForegroundColor Gray
+                    Write-Host "    TOBE: " -NoNewline -ForegroundColor Gray
+                    Write-Host ("{0:N0} MB" -f $memAfter) -NoNewline -ForegroundColor White
+                    if ($memDiff -gt 0) {
+                        Write-Host "  (-$memDiff MB)" -ForegroundColor $memColor
+                    } else {
+                        Write-Host ""
+                    }
+                    Write-Host ""
+
+                    # Disks
+                    $asisDisks = @($lastObj.AsIs.Disks)
+                    $tobeDisks = @($lastObj.ToBe.Disks)
+                    if ($asisDisks.Count -gt 0) {
+                        Write-Host "  Disk" -ForegroundColor White
+                        for ($i = 0; $i -lt $asisDisks.Count; $i++) {
+                            $asDisk = $asisDisks[$i]
+                            $toBeDisk = $null
+                            foreach ($td in $tobeDisks) {
+                                if ($td.Drive -eq $asDisk.Drive) { $toBeDisk = $td; break }
+                            }
+                            if (-not $toBeDisk) { continue }
+                            $freedGB = [math]::Round([double]$toBeDisk.FreeGB - [double]$asDisk.FreeGB, 2)
+                            Write-Host "    [$($asDisk.Drive):]" -NoNewline -ForegroundColor White
+                            Write-Host " Used " -NoNewline -ForegroundColor Gray
+                            Write-Host ("{0:N2}" -f [double]$asDisk.UsedGB) -NoNewline -ForegroundColor Gray
+                            Write-Host " -> " -NoNewline -ForegroundColor Gray
+                            Write-Host ("{0:N2} GB" -f [double]$toBeDisk.UsedGB) -NoNewline -ForegroundColor White
+                            if ($freedGB -gt 0) {
+                                Write-Host "  (+$freedGB GB free)" -ForegroundColor Green
+                            } elseif ($freedGB -lt 0) {
+                                Write-Host "  ($freedGB GB)" -ForegroundColor Yellow
+                            } else {
+                                Write-Host "  (no change)" -ForegroundColor Gray
+                            }
+                        }
+                    }
+                    Write-Host ""
+                }
+
+                # Module results
+                Write-Host "  --- Modules ---" -ForegroundColor Yellow
                 foreach ($r in $lastObj.Results) {
                     $items = $r.Items
                     if ($items -le 0) { continue }
                     $extra = ''
                     if ($r.MemoryFreedMB -gt 0) {
-                        $extra = " (Memory: $($r.MemoryFreedMB) MB freed)"
+                        $extra = " ($($r.MemoryFreedMB) MB freed)"
                     }
                     elseif ($r.SpaceReclaimedMB -gt 0) {
                         $extra = " ($([math]::Round($r.SpaceReclaimedMB, 2)) MB)"
                     }
-                    Write-Host "  $($r.Module): $items items$extra" -ForegroundColor Gray
+                    Write-Host "    $($r.Module): $items items$extra" -ForegroundColor Gray
                 }
             }
             catch {
