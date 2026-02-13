@@ -3,7 +3,7 @@
     RootModule = 'bin/win-ops.ps1'
 
     # Version number of this module.
-    ModuleVersion = '0.7.0'
+    ModuleVersion = '0.7.2'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
@@ -94,7 +94,7 @@
             # IconUri = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'win-ops v0.7.0 - Code refactoring, PackageManagerCleanup fix, README rewrite'
+            ReleaseNotes = 'win-ops v0.7.2 - Code refactoring, PackageManagerCleanup fix, README rewrite'
 
             # Prerelease string of this module
             # Prerelease = ''
