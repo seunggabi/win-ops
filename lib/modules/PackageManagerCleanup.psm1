@@ -158,6 +158,7 @@ function Get-PackageManagerCacheSize {
     )
 
     $totalSize = 0
+    $maxItems = 10000
 
     foreach ($path in $Paths) {
         $expandedPath = [Environment]::ExpandEnvironmentVariables($path)
@@ -168,6 +169,7 @@ function Get-PackageManagerCacheSize {
 
         try {
             $size = (Get-ChildItem -Path $expandedPath -Recurse -File -Force -ErrorAction SilentlyContinue |
+                Select-Object -First $maxItems |
                 Measure-Object -Property Length -Sum).Sum
 
             if ($null -ne $size) {

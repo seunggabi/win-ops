@@ -1,6 +1,6 @@
 # win-ops
 
-> Windows Operations Manager - Automated system maintenance and optimization toolkit
+> Windows Operations Manager — Automated system maintenance and optimization toolkit
 
 <div align="center">
 
@@ -18,9 +18,9 @@
 
 </div>
 
-## What is win-ops?
+## Overview
 
-**win-ops** is a PowerShell-based Windows system cleanup tool. It removes caches, temp files, orphaned registry entries, unused app data, and browsing history — all with a built-in trash system so you can undo anything within 72 hours.
+**win-ops** is a PowerShell-based Windows system maintenance tool. It cleans caches, temp files, orphaned registry entries, unused application data, and browsing history — all backed by a built-in trash system so nothing is permanently lost for 72 hours.
 
 **One command** cleans your entire system:
 
@@ -28,117 +28,119 @@
 win-ops run --force
 ```
 
-### What it cleans
+## Features
 
-| Module | What it does |
-|--------|-------------|
-| **CacheCleanup** | Windows, app, icon, font, thumbnail caches |
-| **TmpCleanup** | Temp files, prefetch, crash dumps, installer leftovers |
-| **LogCleanup** | Application logs, IIS logs, Windows event logs |
-| **MemoryCleanup** | DNS cache flush, idle process working set trim, .NET GC |
-| **RegistryCleanup** | Orphaned uninstall entries, dead SharedDLLs, stale startup items, MUICache |
-| **HistoryCleanup** | Run dialog, Explorer paths/search, jump lists, clipboard, shell history |
-| **OrphanAppCleanup** | Leftover AppData/ProgramData from uninstalled programs |
-| **BrowserCleanup** | Chrome, Edge, Firefox, Brave, Opera caches |
-| **DevCleanup** | npm, yarn, pip, NuGet, Maven, Gradle caches |
-| **DockerCleanup** | Unused images, stopped containers, dangling volumes |
-| **PackageManagerCleanup** | Chocolatey, Scoop cache directories |
-| **ZombieKiller** | Stuck processes (high CPU/memory, unresponsive) |
-| **OrphanKiller** | Orphaned child processes |
-
-## Quick Start
-
-### 1. Install
-
-```powershell
-# Clone
-git clone https://github.com/seunggabi/win-ops.git
-cd win-ops
-
-# Install (copies to %LOCALAPPDATA%\win-ops)
-.\install.ps1
-```
-
-### 2. Run
-
-```powershell
-# Preview what will be cleaned (no changes)
-win-ops analyze
-
-# Run cleanup
-win-ops run
-
-# Run without confirmation prompt
-win-ops run --force
-```
-
-### 3. Schedule (optional, requires admin)
-
-```powershell
-# Register scheduled task using config settings (interval, startTime, etc.)
-win-ops schedule
-
-# Remove scheduled task
-win-ops unschedule
-```
-
-Or via install script:
-
-```powershell
-.\install.ps1 -InstallScheduledTask -ScheduleInterval Hourly
-```
+- **14 cleanup modules** covering caches, temp files, logs, memory, registry, history, browsers, package managers, Docker, and more
+- **Trash system** with 72-hour retention — restore any deleted file
+- **Protected paths and extensions** — critical system files are never touched
+- **Dry-run mode** — preview all changes before executing
+- **Scheduled task support** — automate cleanup on an hourly, daily, or weekly basis
+- **Localization** — English and Korean UI (auto-detected from system locale)
+- **ASIS/TOBE comparison** — before/after metrics for every cleanup run
 
 ## Requirements
 
 - **PowerShell** 5.1+ (Windows PowerShell) or 7.0+ (PowerShell Core)
 - **Windows** 10 / 11 / Server 2016+
-- **Admin privileges** only needed for: scheduled task, system temp, Windows logs, standby memory, HKLM registry
+- **Admin privileges** only needed for: scheduled task registration, system temp cleanup, Windows event logs, standby memory trim, HKLM registry entries
 
-## Commands
+## Installation
+
+### From source (recommended)
+
+```powershell
+git clone https://github.com/seunggabi/win-ops.git
+cd win-ops
+.\install.ps1
+```
+
+### Manual installation
+
+```powershell
+# Copy the project to your local app data
+Copy-Item -Recurse .\win-ops "$env:LOCALAPPDATA\win-ops"
+
+# Add to PATH (current session)
+$env:PATH += ";$env:LOCALAPPDATA\win-ops\bin"
+```
+
+### Install script options
+
+```powershell
+# Install with scheduled task
+.\install.ps1 -InstallScheduledTask -ScheduleInterval Hourly
+
+# Install to a custom path
+.\install.ps1 -InstallPath "D:\tools\win-ops"
+```
+
+## Quick Start
+
+```powershell
+# 1. Analyze — see what would be cleaned (no changes made)
+win-ops analyze
+
+# 2. Preview — dry-run shows exact operations
+win-ops run --dry-run
+
+# 3. Clean — execute cleanup with confirmation prompt
+win-ops run
+
+# 4. Clean without prompts
+win-ops run --force
+
+# 5. Deep clean — enable ALL modules including advanced ones
+win-ops run --all --force
+```
+
+## Command Reference
 
 ```
 win-ops <command> [options]
 ```
 
+### Commands
+
 | Command | Description |
 |---------|-------------|
-| `help` | Show help |
-| `version` | Show version info |
-| `analyze` | Analyze system and show cleanup targets |
-| `run` | Execute cleanup |
-| `status` | Show system status and last cleanup results |
-| `list-trash` | List recoverable items |
-| `restore` | Restore deleted items from trash |
-| `install` | Install as scheduled task (admin) |
-| `uninstall` | Remove scheduled task (admin) |
-| `schedule` | Register scheduled task from config settings (admin) |
-| `unschedule` | Remove scheduled task (admin) |
+| `help` | Display help message |
+| `version` | Display version and environment info |
+| `analyze` | Analyze system and show cleanup targets with estimated space savings |
+| `run` | Execute cleanup operations across enabled modules |
+| `status` | Show system status, disk usage, trash info, and last cleanup results |
+| `list-trash` | List all recoverable items in trash with expiry times |
+| `restore` | Interactive restore — select and recover items from trash |
+| `install` | Install win-ops as a Windows scheduled task (requires admin) |
+| `uninstall` | Remove win-ops scheduled task and optionally data files (requires admin) |
+| `schedule` | Register scheduled task using `config/win-ops.json` settings (requires admin) |
+| `unschedule` | Remove the scheduled task (requires admin) |
 
 ### Options
 
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--dry-run` | `-n` | Preview without making changes |
+| `--dry-run` | `-n` | Preview changes without executing |
 | `--force` | `-f` | Skip confirmation prompts |
-| `--verbose` | `-v` | Detailed output |
+| `--verbose` | `-v` | Enable detailed output |
 | `--all` | `-a` | Enable ALL modules (includes DevCleanup, DockerCleanup, ZombieKiller, OrphanKiller) |
+| `--purge-trash` | `-p` | Permanently delete all trash items after cleanup |
 
 ### Examples
 
 ```powershell
-# Safe preview (default modules only)
+# Safe preview with default modules
 win-ops run --dry-run
 
-# Full cleanup with default modules, no prompts
+# Full cleanup, no prompts
 win-ops run --force
 
-# Enable ALL modules including advanced ones
+# All modules including advanced ones
 win-ops run --all
 
-# Full aggressive cleanup (all modules, no prompts)
+# Full aggressive cleanup — all modules, no prompts
 win-ops run --all --force
 
-# Check what happened last time
+# Check last cleanup results and system health
 win-ops status
 
 # Recover a deleted file
@@ -146,25 +148,44 @@ win-ops list-trash
 win-ops restore
 ```
 
+## Cleanup Modules
+
+win-ops includes 14 modules. By default, 9 safe modules run automatically. The remaining 4 advanced modules activate with `--all`.
+
+| Module | Description | Default | --all |
+|--------|-------------|:-------:|:-----:|
+| **CacheCleanup** | Windows, app, icon, font, thumbnail caches | Yes | Yes |
+| **TmpCleanup** | Temp files, prefetch, crash dumps, installer leftovers | Yes | Yes |
+| **LogCleanup** | Application logs, IIS logs, Windows event logs | Yes | Yes |
+| **MemoryCleanup** | DNS cache flush, idle process working set trim, .NET GC | Yes | Yes |
+| **RegistryCleanup** | Orphaned uninstall entries, dead SharedDLLs, stale startup items, MUICache | Yes | Yes |
+| **HistoryCleanup** | Run dialog, Explorer paths/search, jump lists, clipboard, shell history | Yes | Yes |
+| **OrphanAppCleanup** | Leftover AppData/ProgramData from uninstalled programs | Yes | Yes |
+| **BrowserCleanup** | Chrome, Edge, Firefox, Brave, Opera caches | Yes | Yes |
+| **PackageManagerCleanup** | Chocolatey, Scoop, Winget, Windows Update cache directories | Yes | Yes |
+| **DevCleanup** | npm, yarn, pip, NuGet, Maven, Gradle caches | No | Yes |
+| **DockerCleanup** | Unused images, stopped containers, dangling volumes, networks | No | Yes |
+| **ZombieKiller** | Stuck processes (high CPU/memory, unresponsive) | No | Yes |
+| **OrphanKiller** | Orphaned child processes | No | Yes |
+| **Analyze** | System analysis and cleanup target discovery (used internally) | — | — |
+
 ## Configuration
 
-Config file: `%LOCALAPPDATA%\win-ops\config\win-ops.json`
-Default config: [`config/win-ops.json`](config/win-ops.json)
+**Config file location:** `%LOCALAPPDATA%\win-ops\config\win-ops.json`
+**Default config:** [`config/win-ops.json`](config/win-ops.json)
 
-### Configuration Reference
-
-#### `general` - General settings
+### `general` — General settings
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `dryRun` | bool | `false` | Global dry-run mode (no actual changes) |
-| `verbose` | bool | `false` | Enable verbose logging output |
+| `dryRun` | bool | `false` | Global dry-run mode |
+| `verbose` | bool | `false` | Enable verbose logging |
 | `useTrash` | bool | `true` | Move files to trash instead of permanent delete |
 | `parallel` | bool | `true` | Enable parallel module execution |
 | `maxThreads` | int | `4` | Maximum parallel threads |
 | `timeoutSeconds` | int | `300` | Per-module timeout in seconds |
 
-#### `paths` - Directory paths
+### `paths` — Directory paths
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -172,44 +193,44 @@ Default config: [`config/win-ops.json`](config/win-ops.json)
 | `logs` | string | `%LOCALAPPDATA%\win-ops\logs` | Log file directory |
 | `config` | string | `%LOCALAPPDATA%\win-ops\config` | Config file directory |
 
-#### `retention` - Data retention periods
+### `retention` — Data retention periods
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `trashHours` | int | `72` | Hours before trash items are permanently deleted |
+| `trashHours` | int | `72` | Hours before trash auto-purge |
 | `logDays` | int | `14` | Days to keep log files |
 | `snapshotDays` | int | `30` | Days to keep before/after snapshots |
 
-#### `modules` - Cleanup module settings
+### `modules` — Cleanup module settings
 
-Each module is an object with `name`, `enabled`, and `settings`:
+Each module entry has `name`, `enabled`, and `settings`:
 
-| Module | Default Enabled | Key Settings |
+| Module | Default | Key Settings |
 |--------|:---:|-------------|
-| `CacheCleanup` | ✅ | `location`: All, `ageInDays`: 7, `useTrash`: true |
-| `TmpCleanup` | ✅ | `location`: All, `ageInDays`: 3, `useTrash`: true |
-| `LogCleanup` | ✅ | `location`: All, `ageInDays`: 90, `minSizeMB`: 1, `useTrash`: true |
-| `BrowserCleanup` | ✅ | `browser`: All, `dataType`: Cache, `useTrash`: true |
-| `PackageManagerCleanup` | ✅ | `managers`: ["chocolatey", "scoop"], `useTrash`: true |
-| `MemoryCleanup` | ✅ | `minWorkingSetMB`: 50, `minIdleMinutes`: 10 |
-| `HistoryCleanup` | ✅ | `clearRunDialog`, `clearExplorerPaths`, `clearClipboard`, `clearShellHistory`, etc. |
-| `RegistryCleanup` | ✅ | `backupBeforeDelete`: true, `cleanUninstallEntries`, `cleanSharedDLLs`, `cleanMUICache`, etc. |
-| `OrphanAppCleanup` | ✅ | `dataType`: All, `minAgeInDays`: 30, `useTrash`: true |
-| `ZombieKiller` | ✅ | `cpuThreshold`: 0.5, `memoryThresholdMB`: 100, `minAgeMinutes`: 30, `dryRun`: true |
-| `DevCleanup` | ❌ | `targets`: ["npm", "yarn", "pip"], `useTrash`: true |
-| `DockerCleanup` | ❌ | `pruneImages`: false, `pruneContainers`: true, `pruneVolumes`: false, `pruneNetworks`: true |
-| `OrphanKiller` | ❌ | `minAgeMinutes`: 60 |
+| `CacheCleanup` | On | `location`: All, `ageInDays`: 7, `useTrash`: true |
+| `TmpCleanup` | On | `location`: All, `ageInDays`: 3, `useTrash`: true |
+| `LogCleanup` | On | `location`: All, `ageInDays`: 90, `minSizeMB`: 1, `useTrash`: true |
+| `BrowserCleanup` | On | `browser`: All, `dataType`: Cache, `useTrash`: true |
+| `PackageManagerCleanup` | On | `managers`: ["chocolatey", "scoop"], `useTrash`: true |
+| `MemoryCleanup` | On | `minWorkingSetMB`: 50, `minIdleMinutes`: 10 |
+| `HistoryCleanup` | On | `clearRunDialog`, `clearExplorerPaths`, `clearClipboard`, `clearShellHistory` |
+| `RegistryCleanup` | On | `backupBeforeDelete`: true, `cleanUninstallEntries`, `cleanSharedDLLs`, `cleanMUICache` |
+| `OrphanAppCleanup` | On | `dataType`: All, `minAgeInDays`: 30, `useTrash`: true |
+| `ZombieKiller` | On | `cpuThreshold`: 0.5, `memoryThresholdMB`: 100, `minAgeMinutes`: 30, `dryRun`: true |
+| `DevCleanup` | Off | `targets`: ["npm", "yarn", "pip"], `useTrash`: true |
+| `DockerCleanup` | Off | `pruneImages`: false, `pruneContainers`: true, `pruneVolumes`: false |
+| `OrphanKiller` | Off | `minAgeMinutes`: 60 |
 
-#### `safety` - Safety constraints
+### `safety` — Safety constraints
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `protectedPaths` | string[] | `["%SystemRoot%", "%ProgramFiles%", ...]` | Directories that are never modified |
-| `protectedExtensions` | string[] | `[".exe", ".dll", ".sys", ".ini", ".cfg"]` | File extensions that are never deleted |
+| `protectedPaths` | string[] | `["%SystemRoot%", "%ProgramFiles%", ...]` | Directories never modified |
+| `protectedExtensions` | string[] | `[".exe", ".dll", ".sys", ".ini", ".cfg"]` | File types never deleted |
 | `confirmDeletion` | bool | `true` | Require confirmation before cleanup |
 | `maxBatchSize` | int | `1000` | Maximum items per batch operation |
 
-#### `notifications` - Toast notification settings
+### `notifications` — Toast notification settings
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -217,189 +238,58 @@ Each module is an object with `name`, `enabled`, and `settings`:
 | `types.success` | bool | `true` | Notify on successful cleanup |
 | `types.warning` | bool | `true` | Notify on warnings |
 | `types.error` | bool | `true` | Notify on errors |
-| `minSpaceFreedMB` | int | `100` | Minimum freed space (MB) to trigger notification |
+| `minSpaceFreedMB` | int | `100` | Minimum freed space to trigger notification |
 
-#### `logging` - Log settings
+### `logging` — Log settings
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `level` | string | `"INFO"` | Log level: DEBUG, INFO, WARN, ERROR |
-| `maxLogSizeMB` | int | `5` | Maximum log file size before rotation |
+| `maxLogSizeMB` | int | `5` | Max log file size before rotation |
 | `maxLogFiles` | int | `7` | Number of rotated log files to keep |
 | `colorOutput` | bool | `true` | Enable colored console output |
 
-#### `snapshot` - Before/after snapshot settings
+### `snapshot` — Before/after snapshot settings
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `beforeCleanup` | bool | `true` | Capture system state before cleanup |
 | `afterCleanup` | bool | `true` | Capture system state after cleanup |
 | `exportPath` | string | `%LOCALAPPDATA%\win-ops\snapshots` | Snapshot storage directory |
-| `retention.keepCount` | int | `30` | Maximum number of snapshots to keep |
+| `retention.keepCount` | int | `30` | Maximum snapshots to keep |
 | `retention.keepDays` | int | `90` | Days to keep snapshots |
 
-#### `schedule` - Scheduled task settings
+### `schedule` — Scheduled task settings
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `enabled` | bool | `true` | Enable scheduled task |
-| `interval` | string | `"Hourly"` | Execution interval: `Hourly`, `Daily`, `Weekly` |
+| `interval` | string | `"Hourly"` | Interval: `Hourly`, `Daily`, `Weekly` |
 | `startTime` | string | `"00:00"` | Start time for Daily/Weekly schedules |
 | `runOnBattery` | bool | `false` | Run when on battery power |
 
-### Module activation modes
-
-**Default mode** (`win-ops run`):
-Runs safe, commonly needed modules. Suitable for regular automated cleanup.
-
-**All mode** (`win-ops run --all`):
-Activates ALL modules including advanced/optional ones for deep cleaning.
-
-| Module | Default | --all | Notes |
-|--------|---------|-------|-------|
-| CacheCleanup | ✅ | ✅ | 7-day-old caches |
-| TmpCleanup | ✅ | ✅ | 3-day-old temp files |
-| LogCleanup | ✅ | ✅ | 90-day-old logs, min 1MB |
-| MemoryCleanup | ✅ | ✅ | Idle process trim, DNS flush |
-| RegistryCleanup | ✅ | ✅ | Backs up before deleting |
-| HistoryCleanup | ✅ | ✅ | All history types |
-| OrphanAppCleanup | ✅ | ✅ | 30+ day-old uninstalled app data |
-| BrowserCleanup | ✅ | ✅ | Browser caches (Chrome, Edge, Firefox, etc.) |
-| PackageManagerCleanup | ✅ | ✅ | Chocolatey/Scoop caches |
-| DevCleanup | ❌ | ✅ | Dev tool caches (npm, yarn, pip) |
-| DockerCleanup | ❌ | ✅ | Docker resources (containers, networks) |
-| ZombieKiller | ❌ | ✅ | Zombie processes (stuck/unresponsive) |
-| OrphanKiller | ❌ | ✅ | Orphaned processes (advanced) |
-
-> 💡 **Tip**: Start with default mode. Use `--all` when you need deep cleaning or are troubleshooting performance issues.
-
-## Safety
-
-### Trash system
-
-Every deleted file goes to trash first (not permanently deleted). You have 72 hours to restore.
-
-```powershell
-win-ops list-trash    # See what's in trash
-win-ops restore       # Interactive restore
-```
-
-### Protected paths
-
-These directories are **never** touched:
-- `%SystemRoot%` (C:\Windows)
-- `%ProgramFiles%`, `%ProgramFiles(x86)%`
-- `%USERPROFILE%\Documents`, `Desktop`, `Pictures`, `Music`, `Videos`
-
-### Protected extensions
-
-Files with these extensions are skipped: `.exe`, `.dll`, `.sys`, `.ini`, `.cfg`
-
-### Registry backup
-
-Before deleting any registry entries, RegistryCleanup exports `.reg` backup files to `%LOCALAPPDATA%\win-ops\backups\registry\`.
-
-### Dry-run mode
-
-Always preview first:
-
-```powershell
-win-ops run --dry-run
-```
-
-## Project Structure
-
-```
-win-ops/
-├── bin/
-│   └── win-ops.ps1                # CLI entry point
-├── lib/
-│   ├── core/                      # Core modules
-│   │   ├── Config.psm1            # JSON config with env var expansion
-│   │   ├── Logger.psm1            # Structured logging with rotation
-│   │   ├── Lock.psm1              # Mutex-based process locking
-│   │   ├── Safety.psm1            # 5-tier safety system
-│   │   ├── Disk.psm1              # Disk usage monitoring (CIM)
-│   │   ├── Trash.psm1             # 72-hour trash recovery (SHA256)
-│   │   └── I18n.psm1              # Korean/English localization
-│   ├── modules/                   # Cleanup modules (13)
-│   │   ├── CacheCleanup.psm1
-│   │   ├── TmpCleanup.psm1
-│   │   ├── LogCleanup.psm1
-│   │   ├── MemoryCleanup.psm1     # Memory optimization
-│   │   ├── RegistryCleanup.psm1   # Orphaned registry entries
-│   │   ├── HistoryCleanup.psm1    # Privacy/history cleanup
-│   │   ├── OrphanAppCleanup.psm1  # Uninstalled app data
-│   │   ├── BrowserCleanup.psm1
-│   │   ├── DevCleanup.psm1
-│   │   ├── DockerCleanup.psm1
-│   │   ├── PackageManagerCleanup.psm1
-│   │   ├── ZombieKiller.psm1
-│   │   ├── OrphanKiller.psm1
-│   │   └── Analyze.psm1           # System analysis
-│   └── utils/
-│       ├── Format.psm1            # Size/duration formatting
-│       ├── Parallel.psm1          # Multi-threaded execution
-│       ├── Notify.psm1            # Windows notifications
-│       └── Snapshot.psm1          # Before/after snapshots
-├── config/
-│   ├── win-ops.json               # Default configuration
-│   └── protected-processes.json
-├── resources/
-│   ├── en-US.json                 # English strings
-│   └── ko-KR.json                 # Korean strings
-├── scheduler/
-│   └── TaskScheduler.psm1        # Windows Task Scheduler integration
-├── tests/                         # Pester 5.x test suite
-├── install.ps1
-├── uninstall.ps1
-└── win-ops.psd1
-```
-
-## Localization
-
-win-ops supports Korean and English. The language is auto-detected from your Windows locale. All UI messages, warnings, and status output are localized.
-
-- `ko-KR` : Korean (default on Korean Windows)
-- `en-US` : English (fallback)
-
 ## Scheduled Task
 
-When installed as a scheduled task, win-ops automatically runs `win-ops run --force` at the configured interval.
+When installed as a scheduled task, win-ops runs `win-ops run --force` automatically at the configured interval.
 
 ### How it works
 
-1. **Installation** registers a Windows Task Scheduler task named `"Win-Ops System Cleanup"`
-2. **Default interval is Hourly** — every hour, the task executes cleanup with all default modules
-3. The interval can be changed in `config/win-ops.json` under `schedule.interval` (`Hourly`, `Daily`, `Weekly`)
-4. On battery power, the task is **skipped by default** (`runOnBattery: false`)
-5. Each run acquires a mutex lock to prevent concurrent execution — if a previous run is still active, the new run exits gracefully
+1. A Windows Task Scheduler task named `"Win-Ops System Cleanup"` is registered
+2. Default interval is **Hourly** — configurable via `config/win-ops.json`
+3. On battery power, the task is **skipped by default** (`runOnBattery: false`)
+4. A mutex lock prevents concurrent execution — overlapping runs exit gracefully
 
-### Install / Manage
+### Register / Remove
 
 ```powershell
-# Register scheduled task using config settings (requires admin)
+# Register scheduled task (requires admin)
 win-ops schedule
 
 # Remove scheduled task (requires admin)
 win-ops unschedule
 
-# Or install with custom interval via install.ps1
+# Or install with custom interval
 .\install.ps1 -InstallScheduledTask -ScheduleInterval Daily
-
-# Check task status
-Get-ScheduledTask -TaskName "Win-Ops System Cleanup"
-
-# Disable temporarily
-Disable-ScheduledTask -TaskName "Win-Ops System Cleanup"
-
-# Re-enable
-Enable-ScheduledTask -TaskName "Win-Ops System Cleanup"
-
-# Remove completely
-win-ops uninstall
-# or manually:
-Unregister-ScheduledTask -TaskName "Win-Ops System Cleanup"
 ```
 
 ### Change interval
@@ -417,67 +307,105 @@ Edit `%LOCALAPPDATA%\win-ops\config\win-ops.json`:
 }
 ```
 
-Then re-run `win-ops schedule` to apply the new schedule.
+Then re-run `win-ops schedule` to apply.
 
-## Development
-
-```powershell
-# Run all tests
-Invoke-Pester
-
-# Run specific module tests
-Invoke-Pester -Path tests/Core/
-
-# Run with coverage
-Invoke-Pester -CodeCoverage
-```
-
-## Release Process
-
-### Creating a new release
-
-Releases are automatically built and published via GitHub Actions when you push a version tag:
-
-```bash
-# 1. Update version in your code (if needed)
-
-# 2. Commit changes
-git add .
-git commit -m "chore: prepare release v0.5.0"
-
-# 3. Create and push tag
-git tag v0.5.0
-git push origin main --tags
-
-# 4. GitHub Actions will automatically:
-#    - Build win-ops.exe on Windows
-#    - Create GitHub Release
-#    - Upload exe and zip files
-#    - Generate release notes from commits
-```
-
-### What gets released
-
-Each release includes:
-- `win-ops.exe` - Standalone executable (no installation needed)
-- `win-ops-{version}-windows-x64.zip` - Full package with all files
-- Automated release notes with changelog
-
-### Manual build (Windows only)
-
-If you need to build locally on Windows:
+### Manage the task
 
 ```powershell
-# Install ps2exe
-Install-Module ps2exe -Scope CurrentUser
+# Check task status
+Get-ScheduledTask -TaskName "Win-Ops System Cleanup"
 
-# Build exe
-ps2exe `
-  -inputFile "bin\win-ops.ps1" `
-  -outputFile "win-ops.exe" `
-  -title "win-ops" `
-  -version "0.5.0" `
-  -x64
+# Disable temporarily
+Disable-ScheduledTask -TaskName "Win-Ops System Cleanup"
+
+# Re-enable
+Enable-ScheduledTask -TaskName "Win-Ops System Cleanup"
+
+# Remove completely
+Unregister-ScheduledTask -TaskName "Win-Ops System Cleanup"
+```
+
+## Safety
+
+### Trash system
+
+Every deleted file goes to trash first. You have **72 hours** (configurable) to restore before auto-purge.
+
+```powershell
+win-ops list-trash    # See what's in trash
+win-ops restore       # Interactive restore
+```
+
+### Protected paths
+
+These directories are **never** modified:
+- `%SystemRoot%` (C:\Windows)
+- `%ProgramFiles%`, `%ProgramFiles(x86)%`
+- `%USERPROFILE%\Documents`, `Desktop`, `Pictures`, `Music`, `Videos`
+
+### Protected extensions
+
+Files with these extensions are always skipped: `.exe`, `.dll`, `.sys`, `.ini`, `.cfg`
+
+### Registry backup
+
+Before removing any registry entries, `RegistryCleanup` exports `.reg` backup files to `%LOCALAPPDATA%\win-ops\backups\registry\`.
+
+### Dry-run mode
+
+Always preview first:
+
+```powershell
+win-ops run --dry-run
+```
+
+## Architecture
+
+```
+win-ops/
+├── bin/
+│   └── win-ops.ps1                # CLI entry point
+├── lib/
+│   ├── core/                      # Core infrastructure
+│   │   ├── Config.psm1            # JSON config with env var expansion
+│   │   ├── Logger.psm1            # Structured logging with rotation
+│   │   ├── Lock.psm1              # Mutex-based process locking
+│   │   ├── Safety.psm1            # 5-tier safety system
+│   │   ├── Disk.psm1              # Disk usage monitoring (CIM)
+│   │   ├── Trash.psm1             # 72-hour trash recovery (SHA256)
+│   │   └── I18n.psm1              # Korean/English localization
+│   ├── modules/                   # Cleanup modules (14)
+│   │   ├── Analyze.psm1           # System analysis engine
+│   │   ├── CacheCleanup.psm1
+│   │   ├── TmpCleanup.psm1
+│   │   ├── LogCleanup.psm1
+│   │   ├── MemoryCleanup.psm1
+│   │   ├── RegistryCleanup.psm1
+│   │   ├── HistoryCleanup.psm1
+│   │   ├── OrphanAppCleanup.psm1
+│   │   ├── BrowserCleanup.psm1
+│   │   ├── DevCleanup.psm1
+│   │   ├── DockerCleanup.psm1
+│   │   ├── PackageManagerCleanup.psm1
+│   │   ├── ZombieKiller.psm1
+│   │   └── OrphanKiller.psm1
+│   └── utils/
+│       ├── Format.psm1            # Size/duration formatting
+│       ├── Parallel.psm1          # Multi-threaded execution
+│       ├── Notify.psm1            # Windows toast notifications
+│       └── Snapshot.psm1          # Before/after snapshots
+├── config/
+│   ├── win-ops.json               # Default configuration
+│   └── protected-processes.json   # Process protection list
+├── resources/
+│   ├── en-US.json                 # English strings
+│   └── ko-KR.json                 # Korean strings
+├── scheduler/
+│   └── TaskScheduler.psm1        # Windows Task Scheduler integration
+├── tests/                         # Pester 5.x test suite
+├── install.ps1                    # Installation script
+├── uninstall.ps1                  # Uninstallation script
+└── win-ops.psd1                   # Module manifest
 ```
 
 ## Troubleshooting
@@ -489,39 +417,63 @@ Start-Process pwsh -Verb RunAs -ArgumentList '-Command', 'win-ops run --force'
 
 **"Another instance is running"**
 ```powershell
-win-ops status  # Check lock state, wait or remove lock file
+win-ops status  # Check lock state — wait or remove lock file manually
 ```
 
-**Korean not showing (labels only)**
+**Korean labels not showing**
 ```powershell
-# Ensure resources directory exists in install path
+# Copy resources to the install path
 Copy-Item -Recurse .\resources "$env:LOCALAPPDATA\win-ops\resources" -Force
 ```
 
-**Check logs**
+**View logs**
 ```powershell
 Get-Content "$env:LOCALAPPDATA\win-ops\logs\win-ops.log" -Tail 50
 ```
 
-## Star History
+**Module not found errors after update**
+```powershell
+# Re-run install to sync all files
+.\install.ps1
+```
 
-<div align="center">
+## Development
 
-[![Star History Chart](https://api.star-history.com/svg?repos=seunggabi/win-ops&type=Date)](https://star-history.com/#seunggabi/win-ops&Date)
+```powershell
+# Run all tests
+Invoke-Pester
 
-</div>
+# Run specific module tests
+Invoke-Pester -Path tests/Core/
 
-## Contributors
+# Run with code coverage
+Invoke-Pester -CodeCoverage
+```
 
-<div align="center">
+## Release
 
-[![Contributors](https://contrib.rocks/image?repo=seunggabi/win-ops)](https://github.com/seunggabi/win-ops/graphs/contributors)
+Releases are built and published automatically via GitHub Actions when a version tag is pushed:
 
-</div>
+```bash
+git tag v0.7.0
+git push origin main --tags
+```
+
+Each release includes:
+- `win-ops.exe` — Standalone executable (no installation needed)
+- `win-ops-{version}-windows-x64.zip` — Full package with all files
+- Automated release notes from commit history
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Push and open a Pull Request
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
 ---
 
@@ -529,6 +481,8 @@ MIT License - see [LICENSE](LICENSE)
 
 **Author**: [Seunggabi](https://github.com/seunggabi) | **Repository**: [github.com/seunggabi/win-ops](https://github.com/seunggabi/win-ops)
 
-Made with ❤️ for Windows users
+[![Star History Chart](https://api.star-history.com/svg?repos=seunggabi/win-ops&type=Date)](https://star-history.com/#seunggabi/win-ops&Date)
+
+[![Contributors](https://contrib.rocks/image?repo=seunggabi/win-ops)](https://github.com/seunggabi/win-ops/graphs/contributors)
 
 </div>
