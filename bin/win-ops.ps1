@@ -1090,19 +1090,17 @@ function Set-WinOpsSchedule {
             return
         }
 
-        # Load config to read schedule section
-        $configModule = Join-Path $script:ScriptRoot 'lib\core\Config.psm1'
-        if (Test-Path $configModule) {
-            Import-Module $configModule -Force
-        }
-
-        $config = Get-WinOpsConfig
+        # Read schedule settings from config/win-ops.json
         $interval = 'Hourly'
         $startTime = $null
 
-        if ($config -and $config.schedule) {
-            if ($config.schedule.interval) { $interval = $config.schedule.interval }
-            if ($config.schedule.startTime) { $startTime = $config.schedule.startTime }
+        $winOpsJsonPath = Join-Path $script:ScriptRoot 'config\win-ops.json'
+        if (Test-Path $winOpsJsonPath) {
+            $rawConfig = Get-Content $winOpsJsonPath -Raw | ConvertFrom-Json
+            if ($rawConfig.schedule) {
+                if ($rawConfig.schedule.interval) { $interval = $rawConfig.schedule.interval }
+                if ($rawConfig.schedule.startTime) { $startTime = $rawConfig.schedule.startTime }
+            }
         }
 
         # Import TaskScheduler module
