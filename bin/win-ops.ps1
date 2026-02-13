@@ -38,7 +38,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'version', 'run', 'analyze', 'status', 'list-trash', 'restore', 'install', 'uninstall')]
+    [ValidateSet('help', 'version', 'run', 'analyze', 'status', 'list-trash', 'restore', 'install', 'uninstall', '--help', '--version')]
     [string]$Command = 'help',
 
     [Parameter()]
@@ -59,7 +59,14 @@ param(
 
     [Parameter()]
     [Alias('a')]
-    [switch]$All
+    [switch]$All,
+
+    [Parameter()]
+    [switch]$Version,
+
+    [Parameter()]
+    [Alias('h')]
+    [switch]$Help
 )
 
 #Requires -Version 5.1
@@ -70,6 +77,10 @@ $ErrorActionPreference = 'Stop'
 # Module version
 $script:ModuleVersion = '1.0.0'
 $script:ModuleName = 'win-ops'
+
+# Handle --version and --help flags
+if ($Version -or $Command -eq '--version') { $Command = 'version' }
+if ($Help -or $Command -eq '--help') { $Command = 'help' }
 
 # Set verbose preference if flag is provided
 if ($VerboseOutput) {
@@ -96,7 +107,8 @@ function Get-WinOpsVersion {
 
     Write-Host (Get-WinOpsMessage -Key 'Version_Title' -Args $script:ModuleName, $script:ModuleVersion) -ForegroundColor Cyan
     Write-Host (Get-WinOpsMessage -Key 'Version_PowerShell' -Args $PSVersionTable.PSVersion) -ForegroundColor Gray
-    Write-Host (Get-WinOpsMessage -Key 'Version_OS' -Args $PSVersionTable.OS) -ForegroundColor Gray
+    $osInfo = if ($PSVersionTable.ContainsKey('OS')) { $PSVersionTable.OS } else { [System.Environment]::OSVersion.VersionString }
+    Write-Host (Get-WinOpsMessage -Key 'Version_OS' -Args $osInfo) -ForegroundColor Gray
 }
 
 function Get-WinOpsHelp {
