@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g., v0.6.1)'
+        required: true
+        type: string
 
 jobs:
   build:
@@ -20,11 +26,15 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $tag = $env:GITHUB_REF -replace 'refs/tags/', ''
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $tag = "${{ github.event.inputs.tag }}"
+          } else {
+            $tag = $env:GITHUB_REF -replace 'refs/tags/', ''
+          }
           $version = $tag -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
           echo "TAG=$tag" >> $env:GITHUB_OUTPUT
-          echo "Building version: $version"
+          echo "Building version: $version from event: ${{ github.event_name }}"
 
       - name: Install ps2exe
         shell: pwsh
