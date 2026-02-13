@@ -36,29 +36,40 @@ jobs:
       - name: Build EXE
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $version = "${{ steps.version.outputs.VERSION }}"
 
-          # Build win-ops.exe
-          ps2exe `
-            -inputFile "bin\win-ops.ps1" `
-            -outputFile "win-ops.exe" `
-            -noConsole $false `
-            -title "win-ops - Windows Operations Manager" `
-            -version $version `
-            -company "Seunggabi" `
-            -product "win-ops" `
-            -copyright "MIT License" `
-            -requireAdmin $false `
-            -supportOS `
-            -x64 `
-            -noError
+          Write-Host "Building version: $version"
+          Write-Host "Working directory: $(Get-Location)"
+          Write-Host "Input file exists: $(Test-Path 'bin\win-ops.ps1')"
 
-          if (Test-Path "win-ops.exe") {
-            Write-Host "✅ win-ops.exe built successfully"
-            $size = (Get-Item "win-ops.exe").Length / 1MB
-            Write-Host "📦 Size: $([math]::Round($size, 2)) MB"
-          } else {
-            Write-Error "❌ Failed to build win-ops.exe"
+          try {
+            # Build win-ops.exe
+            Invoke-ps2exe `
+              -inputFile "bin\win-ops.ps1" `
+              -outputFile "win-ops.exe" `
+              -noConsole:$false `
+              -title "win-ops - Windows Operations Manager" `
+              -version $version `
+              -company "Seunggabi" `
+              -product "win-ops" `
+              -copyright "MIT License" `
+              -requireAdmin:$false `
+              -supportOS `
+              -x64 `
+              -verbose
+
+            if (Test-Path "win-ops.exe") {
+              Write-Host "✅ win-ops.exe built successfully"
+              $size = (Get-Item "win-ops.exe").Length / 1MB
+              Write-Host "📦 Size: $([math]::Round($size, 2)) MB"
+            } else {
+              throw "win-ops.exe was not created"
+            }
+          } catch {
+            Write-Error "❌ Failed to build win-ops.exe: $_"
+            Write-Error $_.Exception.Message
+            Write-Error $_.ScriptStackTrace
             exit 1
           }
 
