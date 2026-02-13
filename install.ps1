@@ -62,8 +62,29 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Import I18n module
+# Determine source path (local clone vs remote irm|iex)
 $scriptRoot = $PSScriptRoot
+$tempDownload = $null
+
+if (-not $scriptRoot -or -not (Test-Path (Join-Path $scriptRoot 'bin\win-ops.ps1'))) {
+    # Running via irm|iex — download repo from GitHub
+    Write-Host "[INFO] Remote installation detected. Downloading win-ops..." -ForegroundColor Cyan
+    $zipUrl = 'https://github.com/seunggabi/win-ops/archive/refs/heads/main.zip'
+    $tempDownload = Join-Path $env:TEMP "win-ops-install-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    $zipPath = "$tempDownload.zip"
+
+    try {
+        Invoke-RestMethod -Uri $zipUrl -OutFile $zipPath
+        Expand-Archive -Path $zipPath -DestinationPath $tempDownload -Force
+        $scriptRoot = Get-ChildItem -Path $tempDownload -Directory | Select-Object -First 1 -ExpandProperty FullName
+        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Host "[ERROR] Failed to download win-ops: $_" -ForegroundColor Red
+        exit 1
+    }
+}
+
+# Import I18n module
 $i18nModule = Join-Path $scriptRoot 'lib\core\I18n.psm1'
 if (Test-Path $i18nModule) {
     Import-Module $i18nModule -Force
@@ -249,7 +270,7 @@ Write-InstallMessage "Directory structure created" -Type Success
 # Step 4: Copy files
 Write-InstallMessage "Step 4: Copying files..." -Type Info
 
-$sourcePath = $PSScriptRoot
+$sourcePath = $scriptRoot
 
 try {
     # Copy main executable
@@ -371,5 +392,10 @@ if ($AddToPath) {
 Write-Host ""
 Write-Host "Documentation: https://github.com/seunggabi/win-ops" -ForegroundColor Gray
 Write-Host ""
+
+# Clean up temp download if used
+if ($tempDownload -and (Test-Path $tempDownload)) {
+    Remove-Item -Path $tempDownload -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 #endregion
