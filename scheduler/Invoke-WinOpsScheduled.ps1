@@ -27,6 +27,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$ConfirmPreference = 'None'
 
 # Determine module path
 $modulePath = Split-Path -Parent $PSScriptRoot
