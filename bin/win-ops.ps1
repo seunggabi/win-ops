@@ -62,9 +62,6 @@ param(
     [switch]$All,
 
     [Parameter()]
-    [switch]$Version,
-
-    [Parameter()]
     [Alias('h')]
     [switch]$Help
 )
@@ -84,9 +81,8 @@ if (Test-Path $script:ManifestPath) {
     $script:ModuleVersion = 'unknown'
 }
 
-# Handle --version and --help flags
-if ($Version -or $Command -eq '--version') { $Command = 'version' }
-if ($Help -or $Command -eq '--help') { $Command = 'help' }
+# Handle -Help switch flag
+if ($Help) { $Command = 'help' }
 
 # Set verbose preference if flag is provided
 if ($VerboseOutput) {
@@ -101,6 +97,49 @@ $i18nModule = Join-Path $script:ScriptRoot 'lib\core\I18n.psm1'
 if (Test-Path $i18nModule) {
     Import-Module $i18nModule -Force
     Initialize-WinOpsI18n
+}
+
+function Get-WinOpsModuleConfig {
+    <#
+    .SYNOPSIS
+        Read and parse config/win-ops.json
+    #>
+    [CmdletBinding()]
+    param()
+
+    $configPath = Join-Path $script:ScriptRoot 'config\win-ops.json'
+    if (Test-Path $configPath) {
+        return Get-Content $configPath -Raw | ConvertFrom-Json
+    }
+    return $null
+}
+
+function Get-CleanupResultSummary {
+    <#
+    .SYNOPSIS
+        Extract items count and space freed from a cleanup module result
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [PSCustomObject]$Result
+    )
+
+    $props = $Result.PSObject.Properties
+    $items = if ($props['ItemsProcessed'] -and $Result.ItemsProcessed) { $Result.ItemsProcessed }
+             elseif ($props['ItemsRemoved'] -and $Result.ItemsRemoved) { $Result.ItemsRemoved }
+             elseif ($props['TotalItemsRemoved'] -and $Result.TotalItemsRemoved) { $Result.TotalItemsRemoved }
+             else { 0 }
+    $memoryFreedMB = if ($props['MemoryFreedMB']) { $Result.MemoryFreedMB } else { 0 }
+    $spaceReclaimedMB = if ($props['SpaceReclaimedMB']) { $Result.SpaceReclaimedMB }
+                        elseif ($props['TotalSizeRemovedMB']) { $Result.TotalSizeRemovedMB }
+                        else { 0 }
+
+    return @{
+        Items            = $items
+        MemoryFreedMB    = $memoryFreedMB
+        SpaceReclaimedMB = $spaceReclaimedMB
+    }
 }
 
 function Get-WinOpsVersion {
@@ -449,14 +488,11 @@ function Start-WinOpsCleanup {
 
             # Build module settings lookup from win-ops.json
             $moduleSettings = @{}
-            $winOpsJsonPath = Join-Path $script:ScriptRoot 'config\win-ops.json'
-            if (Test-Path $winOpsJsonPath) {
-                $rawConfig = Get-Content $winOpsJsonPath -Raw | ConvertFrom-Json
-                if ($rawConfig.modules) {
-                    foreach ($mod in $rawConfig.modules) {
-                        if ($mod.name -and $mod.settings) {
-                            $moduleSettings[$mod.name] = $mod.settings
-                        }
+            $rawConfig = Get-WinOpsModuleConfig
+            if ($rawConfig -and $rawConfig.modules) {
+                foreach ($mod in $rawConfig.modules) {
+                    if ($mod.name -and $mod.settings) {
+                        $moduleSettings[$mod.name] = $mod.settings
                     }
                 }
             }
@@ -522,21 +558,17 @@ function Start-WinOpsCleanup {
             foreach ($entry in $results) {
                 $r = $entry.Result
                 if ($null -eq $r) { continue }
-                $props = $r.PSObject.Properties
+                $summary = Get-CleanupResultSummary -Result $r
                 $modName = $entry.Name
-                $items = if ($props['ItemsProcessed'] -and $r.ItemsProcessed) { $r.ItemsProcessed } elseif ($props['ItemsRemoved'] -and $r.ItemsRemoved) { $r.ItemsRemoved } elseif ($props['TotalItemsRemoved'] -and $r.TotalItemsRemoved) { $r.TotalItemsRemoved } else { 0 }
                 $freed = ''
-                if ($props['MemoryFreedMB'] -and $r.MemoryFreedMB -gt 0) {
-                    $freed = " ($($r.MemoryFreedMB) MB freed)"
+                if ($summary.MemoryFreedMB -gt 0) {
+                    $freed = " ($($summary.MemoryFreedMB) MB freed)"
                 }
-                elseif ($props['SpaceReclaimedMB'] -and $r.SpaceReclaimedMB -gt 0) {
-                    $freed = " ($([math]::Round($r.SpaceReclaimedMB, 2)) MB)"
+                elseif ($summary.SpaceReclaimedMB -gt 0) {
+                    $freed = " ($([math]::Round($summary.SpaceReclaimedMB, 2)) MB)"
                 }
-                elseif ($props['TotalSizeRemovedMB'] -and $r.TotalSizeRemovedMB -gt 0) {
-                    $freed = " ($([math]::Round($r.TotalSizeRemovedMB, 2)) MB)"
-                }
-                if ($items -gt 0) {
-                    Write-Host "  $modName : $items items$freed" -ForegroundColor White
+                if ($summary.Items -gt 0) {
+                    Write-Host "  $modName : $($summary.Items) items$freed" -ForegroundColor White
                 }
             }
 
@@ -572,13 +604,12 @@ function Start-WinOpsCleanup {
             foreach ($entry in $results) {
                 $r = $entry.Result
                 if ($null -eq $r) { continue }
-                $props = $r.PSObject.Properties
-                $items = if ($props['ItemsProcessed'] -and $r.ItemsProcessed) { $r.ItemsProcessed } elseif ($props['ItemsRemoved'] -and $r.ItemsRemoved) { $r.ItemsRemoved } elseif ($props['TotalItemsRemoved'] -and $r.TotalItemsRemoved) { $r.TotalItemsRemoved } else { 0 }
+                $summary = Get-CleanupResultSummary -Result $r
                 $lastCleanup.Results += @{
-                    Module = $entry.Name
-                    Items = $items
-                    MemoryFreedMB = if ($props['MemoryFreedMB']) { $r.MemoryFreedMB } else { 0 }
-                    SpaceReclaimedMB = if ($props['SpaceReclaimedMB']) { $r.SpaceReclaimedMB } elseif ($props['TotalSizeRemovedMB']) { $r.TotalSizeRemovedMB } else { 0 }
+                    Module           = $entry.Name
+                    Items            = $summary.Items
+                    MemoryFreedMB    = $summary.MemoryFreedMB
+                    SpaceReclaimedMB = $summary.SpaceReclaimedMB
                 }
             }
             $lastCleanupPath = Join-Path $env:LOCALAPPDATA 'win-ops\last-cleanup.json'
@@ -1094,13 +1125,10 @@ function Set-WinOpsSchedule {
         $interval = 'Hourly'
         $startTime = $null
 
-        $winOpsJsonPath = Join-Path $script:ScriptRoot 'config\win-ops.json'
-        if (Test-Path $winOpsJsonPath) {
-            $rawConfig = Get-Content $winOpsJsonPath -Raw | ConvertFrom-Json
-            if ($rawConfig.schedule) {
-                if ($rawConfig.schedule.interval) { $interval = $rawConfig.schedule.interval }
-                if ($rawConfig.schedule.startTime) { $startTime = $rawConfig.schedule.startTime }
-            }
+        $rawConfig = Get-WinOpsModuleConfig
+        if ($rawConfig -and $rawConfig.schedule) {
+            if ($rawConfig.schedule.interval) { $interval = $rawConfig.schedule.interval }
+            if ($rawConfig.schedule.startTime) { $startTime = $rawConfig.schedule.startTime }
         }
 
         # Import TaskScheduler module
@@ -1204,10 +1232,10 @@ function Invoke-WinOps {
     )
 
     switch ($Command.ToLower()) {
-        'help' {
+        { $_ -in 'help', '--help' } {
             Get-WinOpsHelp
         }
-        'version' {
+        { $_ -in 'version', '--version' } {
             Get-WinOpsVersion
         }
         'analyze' {
