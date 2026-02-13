@@ -126,7 +126,7 @@ try {
                     $params['DryRun'] = $true
                 }
 
-                if ($module.Settings) {
+                if ($module.Settings -and @($module.Settings.PSObject.Properties).Count -gt 0) {
                     foreach ($key in $module.Settings.PSObject.Properties.Name) {
                         $params[$key] = $module.Settings.$key
                     }
@@ -191,7 +191,7 @@ try {
         $snapshotAfter = Get-WinOpsSnapshot -IncludeDisk -IncludeMemory
 
         # Compare snapshots
-        $comparison = Compare-WinOpsSnapshot -Before $snapshotBefore -After $snapshotAfter
+        $comparison = Compare-WinOpsSnapshot -Before $snapshotBefore -After $snapshotAfter -Format Raw
 
         # Generate summary
         $totalFreedGB = [math]::Round($totalFreed / 1GB, 2)
@@ -211,9 +211,9 @@ Total Space Freed: $totalFreedGB GB
 Disk Space Change:
 "@
 
-        if ($comparison.Disks) {
-            foreach ($drive in $comparison.Disks.Keys) {
-                $diskChange = $comparison.Disks[$drive]
+        if ($comparison.Disk) {
+            foreach ($drive in $comparison.Disk.Keys) {
+                $diskChange = $comparison.Disk[$drive]
                 $summary += "`n  $drive - Freed: $($diskChange.FreedGB) GB (Used: $($diskChange.BeforeUsedPercent)% -> $($diskChange.AfterUsedPercent)%)"
             }
         }

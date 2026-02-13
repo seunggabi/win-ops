@@ -114,37 +114,17 @@
     {
       "name": "MemoryCleanup",
       "enabled": true,
-      "settings": {
-        "minWorkingSetMB": 50,
-        "minIdleMinutes": 10
-      }
+      "settings": {}
     },
     {
       "name": "HistoryCleanup",
       "enabled": true,
-      "settings": {
-        "clearRunDialog": true,
-        "clearExplorerPaths": true,
-        "clearExplorerSearch": true,
-        "clearJumpLists": true,
-        "clearRecentDocs": true,
-        "clearActivityTimeline": true,
-        "clearClipboard": true,
-        "clearShellHistory": true,
-        "clearWindowsSearch": true
-      }
+      "settings": {}
     },
     {
       "name": "RegistryCleanup",
       "enabled": true,
-      "settings": {
-        "backupBeforeDelete": true,
-        "cleanUninstallEntries": true,
-        "cleanSharedDLLs": true,
-        "cleanMUICache": true,
-        "cleanStartupEntries": true,
-        "cleanAppPaths": true
-      }
+      "settings": {}
     }
   ],
 
