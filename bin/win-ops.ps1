@@ -55,7 +55,11 @@ param(
 
     [Parameter()]
     [Alias('p')]
-    [switch]$PurgeTrash
+    [switch]$PurgeTrash,
+
+    [Parameter()]
+    [Alias('a')]
+    [switch]$All
 )
 
 #Requires -Version 5.1
@@ -132,6 +136,7 @@ OPTIONS:
     --dry-run, -n   Perform analysis without making actual changes
     --force, -f     Skip confirmation prompts
     --verbose, -v   Enable verbose output
+    --all, -a       Enable ALL modules including advanced ones (DevCleanup, DockerCleanup, ZombieKiller, OrphanKiller)
 
 EXAMPLES:
     win-ops help
@@ -154,6 +159,12 @@ EXAMPLES:
 
     win-ops run --dry-run
         Preview cleanup operations without executing
+
+    win-ops run --all
+        Execute cleanup with ALL modules (including advanced/optional ones)
+
+    win-ops run --all --force
+        Execute full cleanup without confirmation
 
     win-ops status
         Show system status and operation history
@@ -259,7 +270,8 @@ function Start-WinOpsCleanup {
     param(
         [switch]$DryRun,
         [switch]$Force,
-        [switch]$PurgeTrash
+        [switch]$PurgeTrash,
+        [switch]$All
     )
 
     try {
@@ -366,20 +378,38 @@ function Start-WinOpsCleanup {
 
             # Module name to function name mapping
             $moduleMap = @{
-                'CacheCleanup'      = 'Clear-WinOpsCache'
-                'TmpCleanup'        = 'Clear-WinOpsTempFiles'
-                'LogCleanup'        = 'Clear-WinOpsLogFiles'
-                'MemoryCleanup'     = 'Clear-WinOpsMemory'
-                'RegistryCleanup'   = 'Clear-WinOpsRegistry'
-                'HistoryCleanup'    = 'Clear-WinOpsHistory'
-                'OrphanAppCleanup'  = 'Clear-WinOpsOrphanedAppData'
+                'CacheCleanup'           = 'Clear-WinOpsCache'
+                'TmpCleanup'             = 'Clear-WinOpsTempFiles'
+                'LogCleanup'             = 'Clear-WinOpsLogFiles'
+                'MemoryCleanup'          = 'Clear-WinOpsMemory'
+                'RegistryCleanup'        = 'Clear-WinOpsRegistry'
+                'HistoryCleanup'         = 'Clear-WinOpsHistory'
+                'OrphanAppCleanup'       = 'Clear-WinOpsOrphanedAppData'
+                'BrowserCleanup'         = 'Clear-WinOpsBrowserData'
+                'DevCleanup'             = 'Invoke-WinOpsDevCleanup'
+                'DockerCleanup'          = 'Clear-WinOpsDockerResources'
+                'PackageManagerCleanup'  = 'Clear-WinOpsPackageManagerCache'
+                'ZombieKiller'           = 'Invoke-WinOpsZombieCleanup'
+                'OrphanKiller'           = 'Invoke-WinOpsOrphanCleanup'
             }
 
-            $modulesToRun = @(
+            # Default modules (safe and commonly needed)
+            $defaultModules = @(
                 'CacheCleanup', 'TmpCleanup', 'LogCleanup',
                 'MemoryCleanup', 'RegistryCleanup', 'HistoryCleanup',
-                'OrphanAppCleanup'
+                'OrphanAppCleanup', 'BrowserCleanup', 'PackageManagerCleanup'
             )
+
+            # All modules (including advanced/optional ones)
+            $allModules = @(
+                'CacheCleanup', 'TmpCleanup', 'LogCleanup',
+                'MemoryCleanup', 'RegistryCleanup', 'HistoryCleanup',
+                'OrphanAppCleanup', 'BrowserCleanup', 'PackageManagerCleanup',
+                'DevCleanup', 'DockerCleanup', 'ZombieKiller', 'OrphanKiller'
+            )
+
+            # Choose module set based on --all flag
+            $modulesToRun = if ($All) { $allModules } else { $defaultModules }
 
             # Suppress confirmation prompts for all modules (already confirmed at top level)
             $savedConfirmPreference = $ConfirmPreference
@@ -974,7 +1004,8 @@ function Invoke-WinOps {
         [string]$Command,
         [switch]$DryRun,
         [switch]$Force,
-        [switch]$PurgeTrash
+        [switch]$PurgeTrash,
+        [switch]$All
     )
 
     switch ($Command.ToLower()) {
@@ -988,7 +1019,7 @@ function Invoke-WinOps {
             Start-WinOpsAnalysis -DryRun:$DryRun
         }
         'run' {
-            Start-WinOpsCleanup -DryRun:$DryRun -Force:$Force -PurgeTrash:$PurgeTrash
+            Start-WinOpsCleanup -DryRun:$DryRun -Force:$Force -PurgeTrash:$PurgeTrash -All:$All
         }
         'status' {
             Get-WinOpsStatus
@@ -1014,7 +1045,7 @@ function Invoke-WinOps {
 
 # Main execution
 try {
-    Invoke-WinOps -Command $Command -DryRun:$DryRun -Force:$Force -PurgeTrash:$PurgeTrash
+    Invoke-WinOps -Command $Command -DryRun:$DryRun -Force:$Force -PurgeTrash:$PurgeTrash -All:$All
     exit 0
 }
 catch {
