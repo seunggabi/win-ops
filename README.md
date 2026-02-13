@@ -2,9 +2,21 @@
 
 > Windows Operations Manager - Automated system maintenance and optimization toolkit
 
+<div align="center">
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PowerShell 5.1+](https://img.shields.io/badge/PowerShell-5.1+-blue.svg)](https://github.com/PowerShell/PowerShell)
-[![Version](https://img.shields.io/badge/version-0.3.0-brightgreen.svg)](https://github.com/seunggabi/win-ops/releases/tag/v0.3.0)
+[![Version](https://img.shields.io/github/v/release/seunggabi/win-ops?color=brightgreen)](https://github.com/seunggabi/win-ops/releases/latest)
+[![GitHub Stars](https://img.shields.io/github/stars/seunggabi/win-ops?style=social)](https://github.com/seunggabi/win-ops/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/seunggabi/win-ops?style=social)](https://github.com/seunggabi/win-ops/network/members)
+
+[![GitHub Issues](https://img.shields.io/github/issues/seunggabi/win-ops)](https://github.com/seunggabi/win-ops/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/seunggabi/win-ops)](https://github.com/seunggabi/win-ops/pulls)
+[![GitHub Contributors](https://img.shields.io/github/contributors/seunggabi/win-ops)](https://github.com/seunggabi/win-ops/graphs/contributors)
+[![GitHub Last Commit](https://img.shields.io/github/last-commit/seunggabi/win-ops)](https://github.com/seunggabi/win-ops/commits/main)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/seunggabi/win-ops/test.yml?branch=main&label=tests)](https://github.com/seunggabi/win-ops/actions)
+
+</div>
 
 ## What is win-ops?
 
@@ -106,15 +118,22 @@ win-ops <command> [options]
 | `--dry-run` | `-n` | Preview without making changes |
 | `--force` | `-f` | Skip confirmation prompts |
 | `--verbose` | `-v` | Detailed output |
+| `--all` | `-a` | Enable ALL modules (includes DevCleanup, DockerCleanup, ZombieKiller, OrphanKiller) |
 
 ### Examples
 
 ```powershell
-# Safe preview
+# Safe preview (default modules only)
 win-ops run --dry-run
 
-# Full cleanup, no prompts
+# Full cleanup with default modules, no prompts
 win-ops run --force
+
+# Enable ALL modules including advanced ones
+win-ops run --all
+
+# Full aggressive cleanup (all modules, no prompts)
+win-ops run --all --force
 
 # Check what happened last time
 win-ops status
@@ -183,23 +202,31 @@ Each module can be toggled independently:
 }
 ```
 
-### Default enabled modules
+### Module activation modes
 
-| Module | Default | Notes |
-|--------|---------|-------|
-| CacheCleanup | ON | 7-day-old caches |
-| TmpCleanup | ON | 3-day-old temp files |
-| LogCleanup | ON | 90-day-old logs, min 1MB |
-| MemoryCleanup | ON | Idle process trim, DNS flush |
-| RegistryCleanup | ON | Backs up before deleting |
-| HistoryCleanup | ON | All history types |
-| OrphanAppCleanup | OFF | Removes uninstalled app data |
-| BrowserCleanup | OFF | Clears browser caches |
-| DevCleanup | OFF | Clears dev tool caches |
-| DockerCleanup | OFF | Prunes Docker resources |
-| PackageManagerCleanup | OFF | Chocolatey/Scoop caches |
-| ZombieKiller | ON | DryRun by default |
-| OrphanKiller | OFF | Orphaned processes |
+**Default mode** (`win-ops run`):
+Runs safe, commonly needed modules. Suitable for regular automated cleanup.
+
+**All mode** (`win-ops run --all`):
+Activates ALL modules including advanced/optional ones for deep cleaning.
+
+| Module | Default | --all | Notes |
+|--------|---------|-------|-------|
+| CacheCleanup | ✅ | ✅ | 7-day-old caches |
+| TmpCleanup | ✅ | ✅ | 3-day-old temp files |
+| LogCleanup | ✅ | ✅ | 90-day-old logs, min 1MB |
+| MemoryCleanup | ✅ | ✅ | Idle process trim, DNS flush |
+| RegistryCleanup | ✅ | ✅ | Backs up before deleting |
+| HistoryCleanup | ✅ | ✅ | All history types |
+| OrphanAppCleanup | ✅ | ✅ | 30+ day-old uninstalled app data |
+| BrowserCleanup | ✅ | ✅ | Browser caches (Chrome, Edge, Firefox, etc.) |
+| PackageManagerCleanup | ✅ | ✅ | Chocolatey/Scoop caches |
+| DevCleanup | ❌ | ✅ | Dev tool caches (npm, yarn, pip) |
+| DockerCleanup | ❌ | ✅ | Docker resources (containers, networks) |
+| ZombieKiller | ❌ | ✅ | Zombie processes (stuck/unresponsive) |
+| OrphanKiller | ❌ | ✅ | Orphaned processes (advanced) |
+
+> 💡 **Tip**: Start with default mode. Use `--all` when you need deep cleaning or are troubleshooting performance issues.
 
 ### Key settings
 
@@ -351,6 +378,54 @@ Invoke-Pester -Path tests/Core/
 Invoke-Pester -CodeCoverage
 ```
 
+## Release Process
+
+### Creating a new release
+
+Releases are automatically built and published via GitHub Actions when you push a version tag:
+
+```bash
+# 1. Update version in your code (if needed)
+
+# 2. Commit changes
+git add .
+git commit -m "chore: prepare release v0.5.0"
+
+# 3. Create and push tag
+git tag v0.5.0
+git push origin main --tags
+
+# 4. GitHub Actions will automatically:
+#    - Build win-ops.exe on Windows
+#    - Create GitHub Release
+#    - Upload exe and zip files
+#    - Generate release notes from commits
+```
+
+### What gets released
+
+Each release includes:
+- `win-ops.exe` - Standalone executable (no installation needed)
+- `win-ops-{version}-windows-x64.zip` - Full package with all files
+- Automated release notes with changelog
+
+### Manual build (Windows only)
+
+If you need to build locally on Windows:
+
+```powershell
+# Install ps2exe
+Install-Module ps2exe -Scope CurrentUser
+
+# Build exe
+ps2exe `
+  -inputFile "bin\win-ops.ps1" `
+  -outputFile "win-ops.exe" `
+  -title "win-ops" `
+  -version "0.5.0" `
+  -x64
+```
+
 ## Troubleshooting
 
 **"Administrator privileges required"**
@@ -374,10 +449,32 @@ Copy-Item -Recurse .\resources "$env:LOCALAPPDATA\win-ops\resources" -Force
 Get-Content "$env:LOCALAPPDATA\win-ops\logs\win-ops.log" -Tail 50
 ```
 
+## Star History
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=seunggabi/win-ops&type=Date)](https://star-history.com/#seunggabi/win-ops&Date)
+
+</div>
+
+## Contributors
+
+<div align="center">
+
+[![Contributors](https://contrib.rocks/image?repo=seunggabi/win-ops)](https://github.com/seunggabi/win-ops/graphs/contributors)
+
+</div>
+
 ## License
 
 MIT License - see [LICENSE](LICENSE)
 
 ---
 
-**Version**: 0.3.0 | **Author**: [Seunggabi](https://github.com/seunggabi) | **Repository**: [github.com/seunggabi/win-ops](https://github.com/seunggabi/win-ops)
+<div align="center">
+
+**Author**: [Seunggabi](https://github.com/seunggabi) | **Repository**: [github.com/seunggabi/win-ops](https://github.com/seunggabi/win-ops)
+
+Made with ❤️ for Windows users
+
+</div>

@@ -55,7 +55,7 @@
     },
     {
       "name": "BrowserCleanup",
-      "enabled": false,
+      "enabled": true,
       "settings": {
         "browser": "All",
         "dataType": "Cache",
@@ -82,7 +82,7 @@
     },
     {
       "name": "PackageManagerCleanup",
-      "enabled": false,
+      "enabled": true,
       "settings": {
         "managers": ["chocolatey", "scoop"],
         "useTrash": true
@@ -107,7 +107,7 @@
     },
     {
       "name": "OrphanAppCleanup",
-      "enabled": false,
+      "enabled": true,
       "settings": {
         "dataType": "All",
         "minAgeInDays": 30,
