@@ -63,7 +63,10 @@ param(
 
     [Parameter()]
     [Alias('h')]
-    [switch]$Help
+    [switch]$Help,
+
+    [Parameter(ValueFromRemainingArguments)]
+    [string[]]$RemainingArgs
 )
 
 #Requires -Version 5.1
@@ -79,6 +82,19 @@ if (Test-Path $script:ManifestPath) {
     $script:ModuleVersion = $manifestData.ModuleVersion
 } else {
     $script:ModuleVersion = 'unknown'
+}
+
+# Parse GNU-style --flags from remaining arguments
+if ($RemainingArgs) {
+    foreach ($arg in $RemainingArgs) {
+        switch ($arg) {
+            '--dry-run'     { $DryRun = $true }
+            '--force'       { $Force = $true }
+            '--all'         { $All = $true }
+            '--verbose'     { $VerboseOutput = $true }
+            '--purge-trash' { $PurgeTrash = $true }
+        }
+    }
 }
 
 # Handle -Help switch flag
