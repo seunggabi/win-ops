@@ -3,7 +3,7 @@
     RootModule = 'bin/win-ops.ps1'
 
     # Version number of this module.
-    ModuleVersion = '0.7.7'
+    ModuleVersion = '0.7.8'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Core')
