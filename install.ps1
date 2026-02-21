@@ -316,9 +316,12 @@ if ($AddToPath) {
     Write-InstallMessage "Step 5: Skipping PATH addition (use -AddToPath to enable)" -Type Info
 }
 
-# Step 6: Install scheduled task (optional)
-if ($InstallScheduledTask) {
-    Write-InstallMessage "Step 6: Installing scheduled task..." -Type Info
+# Step 6: Install scheduled task (optional, or auto-update if already installed)
+$taskAlreadyExists = Get-ScheduledTask -TaskName "Win-Ops System Cleanup" -ErrorAction SilentlyContinue
+
+if ($InstallScheduledTask -or $taskAlreadyExists) {
+    $reason = if ($taskAlreadyExists -and -not $InstallScheduledTask) { "updating existing" } else { "installing" }
+    Write-InstallMessage "Step 6: $(if ($taskAlreadyExists -and -not $InstallScheduledTask) { 'Updating existing scheduled task (auto-detected)...' } else { 'Installing scheduled task...' })" -Type Info
 
     if (-not (Test-IsElevated)) {
         Write-InstallMessage "Administrator privileges required for scheduled task installation" -Type Error
@@ -329,9 +332,9 @@ if ($InstallScheduledTask) {
             Import-Module $schedulerModule -Force
 
             Install-WinOpsScheduledTask -Interval $ScheduleInterval -Force
-            Write-InstallMessage "Scheduled task installed successfully" -Type Success
+            Write-InstallMessage "Scheduled task $reason successfully" -Type Success
         } catch {
-            Write-InstallMessage "Failed to install scheduled task: $_" -Type Error
+            Write-InstallMessage "Failed to $reason scheduled task: $_" -Type Error
             Write-InstallMessage "You can install it manually later using: Install-WinOpsScheduledTask" -Type Info
         }
     }

@@ -48,7 +48,7 @@
   <Actions Context="Author">
     <Exec>
       <Command>pwsh.exe</Command>
-      <Arguments>-NoProfile -ExecutionPolicy Bypass -File "SCRIPT_PATH"</Arguments>
+      <Arguments>-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File "SCRIPT_PATH"</Arguments>
       <WorkingDirectory>WORKING_DIR</WorkingDirectory>
     </Exec>
   </Actions>

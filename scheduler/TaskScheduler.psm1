@@ -150,7 +150,7 @@ function Install-WinOpsScheduledTask {
     # Create task action
     $action = New-ScheduledTaskAction `
         -Execute "pwsh.exe" `
-        -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" `
+        -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`"" `
         -WorkingDirectory $workingDir
 
     # Create task trigger based on interval
