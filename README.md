@@ -50,9 +50,10 @@ win-ops run --force
 
 ```powershell
 winget install --id Git.Git -e --source winget
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser
 git clone https://github.com/seunggabi/win-ops.git
 cd win-ops
-PowerShell -ExecutionPolicy Bypass -File .\install.ps1
+.\install.ps1
 ```
 
 ### Manual installation
