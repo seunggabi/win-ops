@@ -133,6 +133,8 @@
       "%SystemRoot%",
       "%ProgramFiles%",
       "%ProgramFiles(x86)%",
+      "%LOCALAPPDATA%\\Programs",
+      "%LOCALAPPDATA%\\JetBrains",
       "%USERPROFILE%\\Documents",
       "%USERPROFILE%\\Desktop",
       "%USERPROFILE%\\Pictures",

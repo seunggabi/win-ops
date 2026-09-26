@@ -97,9 +97,14 @@ function Find-OrphanedAppDataFolders {
 
             foreach ($folder in $folders) {
                 # Skip system folders
+                # 'Programs' and friends are containers that hold installed apps,
+                # not apps themselves. No installed app is named after them, so the
+                # name-match below would flag the whole container as orphaned and
+                # trash every app inside it.
                 $systemFolders = @(
                     'Microsoft', 'Windows', 'Temp', 'Package Cache', 'Packages',
-                    'Local', 'LocalLow', 'Roaming', 'Application Data'
+                    'Local', 'LocalLow', 'Roaming', 'Application Data',
+                    'Programs', 'Apps', 'Common', 'CrashDumps', 'VirtualStore'
                 )
 
                 if ($folder.Name -in $systemFolders) {
