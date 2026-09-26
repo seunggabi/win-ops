@@ -63,6 +63,42 @@ function Get-InstalledApplications {
     return $installedApps | Select-Object -Unique
 }
 
+function Test-FolderHasExecutables {
+    <#
+    .SYNOPSIS
+        Returns $true when a folder looks like an installed application.
+
+    .DESCRIPTION
+        Name matching alone cannot tell an abandoned data folder from a live
+        installation: a container such as 'Programs' matches no installed app,
+        and a vendor folder may be named differently from its product. A folder
+        that carries executables or native libraries is an installation, whatever
+        it is called, and must never be reported as orphaned.
+
+        Stops at the first hit, so the common case costs one directory read.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter()]
+        [int]$Depth = 3
+    )
+
+    foreach ($pattern in @('*.exe', '*.dll', '*.sys', '*.msi')) {
+        $hit = Get-ChildItem -Path $Path -Filter $pattern -Recurse -Depth $Depth `
+            -File -Force -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($hit) {
+            Write-Verbose "Executable content found, not an orphan: $($hit.FullName)"
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Find-OrphanedAppDataFolders {
     <#
     .SYNOPSIS
@@ -130,6 +166,12 @@ function Find-OrphanedAppDataFolders {
                 }
 
                 if (-not $matchesInstalledApp) {
+                    # A folder carrying executables is an installation, whatever
+                    # its name. Never report it as orphaned.
+                    if (Test-FolderHasExecutables -Path $folder.FullName) {
+                        continue
+                    }
+
                     # Calculate folder size
                     $size = 0
                     try {
@@ -279,6 +321,12 @@ function Find-OrphanedProgramFiles {
                 }
 
                 if (-not $matchesInstalledApp) {
+                    # A folder carrying executables is an installation, whatever
+                    # its name. Never report it as orphaned.
+                    if (Test-FolderHasExecutables -Path $folder.FullName) {
+                        continue
+                    }
+
                     # Calculate folder size
                     $size = 0
                     try {
