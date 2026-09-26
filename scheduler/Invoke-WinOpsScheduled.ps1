@@ -186,6 +186,22 @@ try {
             }
         }
 
+        # Purge trash entries older than retention.trashHours (by move-to-trash time)
+        if (-not $DryRun) {
+            try {
+                Import-Module (Join-Path $modulePath 'lib\core\Trash.psm1') -Force -Global
+                $trashHours = 72
+                if ($config.PSObject.Properties['retention'] -and $config.retention.PSObject.Properties['trashHours']) {
+                    $trashHours = [double]$config.retention.trashHours
+                }
+                $purge = Remove-WinOpsExpiredTrash -RetentionHours $trashHours -Confirm:$false -ErrorAction Stop
+                Write-WinOpsLog -Level INFO -Message "Trash purge (>$trashHours h): removed $($purge.RemovedCount) items ($($purge.ReclaimedMB) MB), adopted $($purge.AdoptedCount) unindexed, $($purge.FailedCount) failed"
+                $totalFreed += $purge.ReclaimedBytes
+            } catch {
+                Write-WinOpsLog -Level ERROR -Message "Trash purge failed" -Exception $_
+            }
+        }
+
         # Take after snapshot
         Write-WinOpsLog -Level INFO -Message "Taking system snapshot (after)"
         $snapshotAfter = Get-WinOpsSnapshot -IncludeDisk -IncludeMemory
