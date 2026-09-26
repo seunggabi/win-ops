@@ -152,19 +152,66 @@ function Write-TrashIndex {
     }
 }
 
-function Get-ExpiredTrashItems {
-    [CmdletBinding()]
+function ConvertTo-DeletedAt {
+    # pwsh 7 ConvertFrom-Json turns ISO strings into DateTime; PS 5.1 keeps strings.
+    param($Value)
+
+    if ($Value -is [datetime]) { return [DateTimeOffset]$Value }
+    return [DateTimeOffset]::Parse([string]$Value, [Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Add-UnindexedTrashEntries {
+    <#
+    .SYNOPSIS
+        Records trash entries that have no index record (e.g. the index write failed
+        after Move-Item). Their move time is unknown and the item keeps its original
+        timestamps, so the first time we see them counts as the move time.
+    #>
     param(
         [Parameter(Mandatory)]
         [hashtable]$Index
     )
 
-    $expirationTime = [DateTimeOffset]::UtcNow.AddHours(-$script:RetentionHours)
+    $known = @{}
+    foreach ($item in $Index.items.Values) {
+        $known[[System.IO.Path]::GetFileName($item.trash_path)] = $true
+    }
+
+    $now = [DateTimeOffset]::UtcNow.ToString("o")
+    $added = 0
+    foreach ($entry in Get-ChildItem -LiteralPath $script:TrashRoot -Force) {
+        if ($entry.Name -like '.index.json*' -or $known.ContainsKey($entry.Name)) { continue }
+
+        # ponytail: size left at 0 for adopted entries, measure if reporting needs it
+        $Index.items["unindexed-$($entry.Name)"] = @{
+            original_path = $null
+            trash_path = $entry.FullName
+            deleted_at = $now
+            size = 0
+            module = "Unindexed"
+        }
+        $added++
+    }
+
+    return $added
+}
+
+function Get-ExpiredTrashItems {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [hashtable]$Index,
+
+        [Parameter()]
+        [double]$RetentionHours = $script:RetentionHours
+    )
+
+    $expirationTime = [DateTimeOffset]::UtcNow.AddHours(-$RetentionHours)
     $expired = @()
 
-    foreach ($hash in $Index.items.Keys) {
+    foreach ($hash in @($Index.items.Keys)) {
         $item = $Index.items[$hash]
-        $deletedAt = [DateTimeOffset]::Parse($item.deleted_at)
+        $deletedAt = ConvertTo-DeletedAt $item.deleted_at
 
         if ($deletedAt -lt $expirationTime) {
             $expired += @{
@@ -282,48 +329,67 @@ function Move-WinOpsToTrash {
 function Remove-WinOpsExpiredTrash {
     <#
     .SYNOPSIS
-    Permanently deletes trash items older than 72 hours.
+    Permanently deletes trash items moved to trash more than RetentionHours ago.
 
     .DESCRIPTION
-    Removes expired items from trash and updates the index.
+    Age is the index deleted_at (set at move time), never the item's own
+    CreationTime/LastWriteTime, which are preserved by Move-Item. Entries on disk
+    without an index record are recorded with the current time first, so they
+    expire RetentionHours after they are first seen.
+
+    .PARAMETER RetentionHours
+    Hours to keep items (config retention.trashHours). Default 72.
 
     .EXAMPLE
-    Remove-WinOpsExpiredTrash
+    Remove-WinOpsExpiredTrash -RetentionHours 72
     #>
     [CmdletBinding(SupportsShouldProcess)]
-    param()
+    param(
+        [Parameter()]
+        [double]$RetentionHours = $script:RetentionHours
+    )
 
     Initialize-TrashDirectory
 
     try {
         Lock-IndexFile
         $index = Read-TrashIndex
-        $expired = Get-ExpiredTrashItems -Index $index
+        $adopted = Add-UnindexedTrashEntries -Index $index
+        $expired = Get-ExpiredTrashItems -Index $index -RetentionHours $RetentionHours
 
         $totalSize = 0
         $count = 0
+        $failed = 0
 
         foreach ($entry in $expired) {
             $hash = $entry.hash
             $item = $entry.item
 
             if ($PSCmdlet.ShouldProcess($item.trash_path, "Permanently delete")) {
-                if (Test-Path $item.trash_path) {
-                    Remove-Item -Path $item.trash_path -Recurse -Force
-                    $totalSize += $item.size
-                    $count++
+                try {
+                    if (Test-Path -LiteralPath $item.trash_path) {
+                        Remove-Item -LiteralPath $item.trash_path -Recurse -Force -ErrorAction Stop
+                        $totalSize += $item.size
+                        $count++
+                    }
+                    $index.items.Remove($hash)
                 }
-
-                $index.items.Remove($hash)
+                catch {
+                    # Keep the index record so the next run retries this entry.
+                    $failed++
+                    Write-Warning "Failed to purge $($item.trash_path): $_"
+                }
             }
         }
 
         Write-TrashIndex -Index $index
 
-        Write-Verbose "Removed $count expired items ($([math]::Round($totalSize / 1MB, 2)) MB)"
+        Write-Verbose "Removed $count expired items ($([math]::Round($totalSize / 1MB, 2)) MB), adopted $adopted unindexed, $failed failed"
 
         return [PSCustomObject]@{
             RemovedCount = $count
+            FailedCount = $failed
+            AdoptedCount = $adopted
             ReclaimedBytes = $totalSize
             ReclaimedMB = [math]::Round($totalSize / 1MB, 2)
         }
@@ -487,7 +553,7 @@ function Get-WinOpsTrashList {
 
         $results = foreach ($hash in $index.items.Keys) {
             $item = $index.items[$hash]
-            $deletedAt = [DateTimeOffset]::Parse($item.deleted_at)
+            $deletedAt = ConvertTo-DeletedAt $item.deleted_at
             $age = $now - $deletedAt
             $expiresIn = $deletedAt.AddHours($script:RetentionHours) - $now
             $isExpired = $deletedAt -lt $expirationTime
